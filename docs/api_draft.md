@@ -1,5 +1,20 @@
 # API Draft
 
+## 문서 메타데이터
+
+- 문서 유형: API Product Draft
+- 상태: Draft v0.4
+- 권위 범위: API endpoint group, product-level usage intent, consumer-facing API 방향
+- 상위 문서: `architecture_specification.md`
+- 관련 문서: `docs/spec/api_spec.md`, `data_contract_draft.md`, `runtime_scheduling_policy.md`
+- 최종 수정일: 2026-04-15
+
+## 0. 문서 역할
+
+이 문서는 API의 제품/개요 수준 초안이다. endpoint group, 사용 의도, 소비자별 API 경계를 설명한다.
+
+구현 시 상세 계약의 source of truth는 `docs/spec/api_spec.md`다. request/response 필드, 인증, idempotency, error model, pagination/filter/sort 규칙이 충돌하면 `docs/spec/api_spec.md`를 우선한다.
+
 ## 1. API 설계 원칙
 
 - 모든 endpoint는 `/api/v1` 아래에 둔다.
@@ -8,7 +23,8 @@
 - QTS, Generic, Workflow output은 각각 별도 endpoint group으로 제공한다.
 - n8n은 inbound와 downstream consumer 양쪽 흐름을 모두 가진다.
 - API route는 Core/Adapter/Repository를 직접 조합하지 않고 Application UseCase만 호출한다.
-- API DTO는 `src/contracts/api.py`에 두고, Adapter payload contract와 분리한다.
+- API transport DTO는 `src/contracts/api.py` 또는 규모 증가 시 `src/contracts/api_requests.py`, `src/contracts/api_responses.py`에 둔다.
+- API transport DTO는 Core signal contract나 Adapter payload contract로 재사용하지 않는다.
 
 ## 2. 공통 API 계약
 

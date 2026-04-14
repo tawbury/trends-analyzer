@@ -1,5 +1,14 @@
 # 런타임 및 스케줄링 정책
 
+## 문서 메타데이터
+
+- 문서 유형: Runtime & Scheduling Policy
+- 상태: Draft v0.4
+- 권위 범위: runtime mode, 장중 제한, batch window, retry/rebuild, dispatch 실행 정책
+- 상위 문서: `architecture_specification.md`
+- 관련 문서: `deployment_topology.md`, `environment_config.md`, `observability_ops.md`
+- 최종 수정일: 2026-04-15
+
 ## 1. 목적
 
 이 문서는 Trend Intelligence Platform의 runtime mode, market-hours restriction, batch window, retry/rebuild 규칙, local/OCI validation 단계를 정의한다.
@@ -19,6 +28,8 @@
 - Batch Worker는 UseCase를 호출한다.
 - Scheduler는 Batch Worker 또는 UseCase trigger만 호출한다.
 - Core와 Adapter 직접 조합은 `application/use_cases`에서만 수행한다.
+- Ingestion port 호출도 UseCase가 조율하며, Batch Worker나 Scheduler가 source client를 직접 호출하지 않는다.
+- Workflow dispatch는 UseCase가 업무 흐름상 요청하고, `runtime/dispatch`가 idempotency/retryability/실제 실행 여부를 최종 판단한다.
 
 ## 3. 한국 장중 제한
 
@@ -59,6 +70,8 @@
 - rebuild는 기본적으로 dry-run 후 실제 실행한다.
 - source별 수집 실패는 전체 batch 실패와 분리해 기록한다.
 - workflow dispatch retry는 payload id와 downstream target을 기준으로 idempotency를 고려한다.
+- Runtime Dispatch는 dispatch retry 가능 여부의 최종 gate다.
+- UseCase는 retry 사유와 correlation context를 전달하지만, 실제 재시도 실행 여부는 Runtime Dispatch 정책을 통과해야 한다.
 
 ## 6. 로컬 검증 단계
 

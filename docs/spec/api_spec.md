@@ -1,8 +1,19 @@
 # API Spec
 
+## 문서 메타데이터
+
+- 문서 유형: API Implementation Spec
+- 상태: Draft v0.4
+- 권위 범위: `/api/v1` 구현 계약, request/response DTO, auth/idempotency/error/pagination/webhook 규칙
+- 상위 문서: `api_draft.md`
+- 관련 문서: `data_contract_draft.md`, `runtime_scheduling_policy.md`, `environment_config.md`
+- 최종 수정일: 2026-04-15
+
 ## 1. 범위
 
 이 문서는 Trend Intelligence Platform의 `/api/v1` REST API 계약을 정의한다.
+
+`api_draft.md`는 product-level API 방향과 endpoint group을 설명한다. 이 문서는 구현자가 따라야 할 API 계약의 source of truth다. 두 문서가 충돌하면 request/response 필드, 인증, idempotency, error response, pagination/filter/sort, webhook verification은 이 문서를 우선한다.
 
 API 계층의 목적은 다음과 같다.
 
@@ -17,6 +28,8 @@ API 계층의 목적은 다음과 같다.
 - API route는 Application UseCase를 호출하고 Core/Adapter/Repository를 직접 조합하지 않는다.
 - write/heavy endpoint는 `src/api/dependencies.py`의 장중 보호 dependency를 통과해야 한다.
 - response는 Core 내부 모델을 그대로 노출하지 않고 API schema로 변환한다.
+- API transport schema는 `src/contracts/api.py` 또는 규모 증가 시 `src/contracts/api_requests.py`, `src/contracts/api_responses.py`에 둔다.
+- API transport schema는 Core signal contract나 Adapter payload contract로 import되어서는 안 된다.
 - timestamp는 ISO 8601 문자열을 사용하고 timezone을 명시한다.
 - pagination이 필요한 조회 API는 `limit`, `offset` 또는 cursor 방식을 명시적으로 선택한다.
 - 초기 인증 방식은 배포 전 확정하되, 운영 배포 전에는 최소 Bearer token 또는 reverse proxy 인증을 둔다.
@@ -66,7 +79,7 @@ n8n inbound webhook은 다음 중 하나를 사용한다.
 - timestamp 또는 nonce가 도입될 경우 replay window
 - source header
 
-검증 실패 시 Core ingestion을 호출하지 않는다.
+검증 실패 시 IngestNewsUseCase 또는 ingestion port를 호출하지 않는다.
 
 ### 2.2 표준 에러 모델
 

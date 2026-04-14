@@ -27,9 +27,9 @@
 | 항목 | 내용 |
 |------|------|
 | 작업 브랜치 | `main` |
-| 목표 | v0.3 문서 하드닝: UseCase/Contracts 실제 소스 구조 고정, workflow/n8n/dispatch 분리, API 공통 계약과 환경 설정 기준 보강 |
-| 최근 완료 | v0.2 구현 경계 문서 하드닝 및 배포/운영/문서 인덱스 추가 |
-| 완료 조건 | 아키텍처/모듈/API/spec 문서에 application/use_cases, contracts, integration/n8n, runtime/dispatch, environment config, document metadata 기준 반영 |
+| 목표 | 최종 문서 정합성 패스: ingestion/usecase, dispatch 책임, API 문서 권위, API DTO 범위, 메타데이터 header 정리 |
+| 최근 완료 | v0.3 구현 경계 문서 하드닝 및 환경/문서 메타데이터 기준 추가 |
+| 완료 조건 | 핵심 권위 문서에 metadata header를 추가하고 ingestion/usecase, runtime dispatch, API draft/spec, contracts/api.py 범위의 모호성 제거 |
 
 ## Code Consistency Rules
 

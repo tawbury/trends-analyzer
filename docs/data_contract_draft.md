@@ -1,5 +1,14 @@
 # 데이터 계약 초안
 
+## 문서 메타데이터
+
+- 문서 유형: Data Contract Draft
+- 상태: Draft v0.4
+- 권위 범위: Core signal contract, consumer payload contract, score/entity 정의, DTO 분리 원칙
+- 상위 문서: `architecture_specification.md`
+- 관련 문서: `docs/spec/data_model_spec.md`, `docs/spec/persistence_spec.md`, `docs/spec/api_spec.md`
+- 최종 수정일: 2026-04-15
+
 ## 1. 계약 원칙
 
 - Core signal model은 consumer-agnostic이어야 한다.
@@ -15,9 +24,15 @@
 |------|-----------|------|
 | Core signal contracts | `src/contracts/core.py` | RawNewsItem, NewsEvaluation, MarketSignal, ThemeSignal, StockSignal, TrendSnapshot |
 | Adapter payload contracts | `src/contracts/payloads.py` | QTSInputPayload, GenericInsightPayload, WorkflowTriggerPayload |
-| API DTO contracts | `src/contracts/api.py` | API request/response, ErrorResponse, Pagination |
+| API DTO contracts | `src/contracts/api.py` 또는 `src/contracts/api_requests.py`, `src/contracts/api_responses.py` | transport 전용 API request/response, ErrorResponse, Pagination |
 | Runtime/job contracts | `src/contracts/runtime.py` | RuntimeMode, JobRequest, JobResult, CorrelationContext |
 | Port contracts | `src/contracts/ports.py` | repository/source/dispatch protocol |
+
+API DTO 주의:
+
+- `contracts/api.py`는 transport DTO 전용이다.
+- API request/response schema는 Core signal contract나 Adapter payload contract로 역수입하지 않는다.
+- API DTO가 많아지면 `api_requests.py`와 `api_responses.py`로 분리한다.
 
 ## 2. Core Signal Model
 

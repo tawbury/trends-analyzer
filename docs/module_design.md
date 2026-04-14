@@ -1,11 +1,21 @@
 # Trend Intelligence Platform 모듈 설계서
 
+## 문서 메타데이터
+
+- 문서 유형: Module Design
+- 상태: Draft v0.4
+- 권위 범위: 모듈 책임, UseCase/Adapter/Gateway/Dispatch/Port 경계
+- 상위 문서: `architecture_specification.md`
+- 관련 문서: `docs/spec/source_module_spec.md`, `data_contract_draft.md`, `runtime_scheduling_policy.md`
+- 최종 수정일: 2026-04-15
+
 ## 1. 모듈 설계 원칙
 
 - Core와 Adapter 책임을 분리한다.
 - 분석 output과 consumer-specific payload를 분리한다.
 - API, Batch, Scheduler는 Core와 Adapter를 직접 조합하지 않고 `application/use_cases`를 호출한다.
 - UseCase는 Core, Adapter, Repository, 외부 port 호출 순서를 조율하는 orchestration boundary다.
+- UseCase는 ingestion port를 호출하며, ingestion은 UseCase보다 위에 있는 독립 orchestration 계층이 아니다.
 - 계약은 `contracts` 계층에서 먼저 정의하고 Core/Adapter/API/DB는 해당 계약에 의존한다.
 - repository와 port를 통해 저장소와 외부 시스템 의존성을 격리한다.
 
@@ -23,12 +33,15 @@
 
 - `src/contracts/core.py`
 - `src/contracts/payloads.py`
-- `src/contracts/api.py`
+- `src/contracts/api.py` 또는 `src/contracts/api_requests.py` / `src/contracts/api_responses.py`
 - `src/contracts/runtime.py`
 - `src/contracts/ports.py`
 
 주의:
 
+- API transport DTO는 Core signal contract나 Adapter payload contract로 재사용하지 않는다.
+- `src/contracts/api.py`를 사용할 경우 request/response transport schema만 둔다.
+- API DTO 규모가 커지면 `src/contracts/api_requests.py`와 `src/contracts/api_responses.py`로 분리한다.
 - Adapter는 API DTO가 아니라 payload contract에 의존한다.
 - Core는 API schema를 import하지 않는다.
 - DB repository는 repository contract를 구현한다.
@@ -38,7 +51,7 @@
 책임:
 
 - API route, batch runner, scheduler가 호출하는 업무 흐름을 제공한다.
-- Core 분석, Adapter 변환, repository 저장, integration port 호출을 조율한다.
+- ingestion port 호출, Core 분석, Adapter 변환, repository 저장, dispatch 요청을 조율한다.
 - job_id, correlation_id, requested_by, runtime mode를 전달한다.
 
 권장 use case:
@@ -188,7 +201,8 @@
 
 - Workflow Adapter는 payload를 만든다.
 - n8n Integration Gateway는 webhook/HTTP 경계를 처리한다.
-- Runtime Dispatch는 언제/어떻게 dispatch를 실행할지 결정한다.
+- UseCase는 업무 흐름상 dispatch를 요청하고 `correlation_id`, `job_id`, `requested_by`를 전달한다.
+- Runtime Dispatch는 idempotency, retryability, 장중 정책, 실제 dispatch 실행 여부에 대한 최종 실행-policy gate다.
 
 ## 10. API Service
 

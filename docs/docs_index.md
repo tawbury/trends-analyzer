@@ -1,5 +1,14 @@
 # 문서 인덱스 및 권위 기준
 
+## 문서 메타데이터
+
+- 문서 유형: Documentation Index
+- 상태: Draft v0.4
+- 권위 범위: 문서 역할, source-of-truth 관계, 변경 규칙
+- 상위 문서: 없음
+- 관련 문서: `document_metadata_standard.md`, `refactoring_notes.md`, `open_decisions.md`
+- 최종 수정일: 2026-04-15
+
 ## 1. 목적
 
 문서 수가 늘어나면 같은 내용을 여러 곳에서 반복하면서 drift가 발생할 수 있다. 이 문서는 각 문서의 역할과 권위 기준을 정의한다.
@@ -11,7 +20,7 @@
 | `master_planning.md` | 제품 방향과 전략 | 제품 비전, 목표/비목표, 범위, 로드맵 |
 | `architecture_specification.md` | 상위 아키텍처 | 계층, 경계, runtime separation, integration direction |
 | `module_design.md` | 모듈 설계 | 모듈 책임, UseCase, Adapter, Gateway, Ports |
-| `api_draft.md` | API 초안 | endpoint group, API 공통 계약, 요청/응답 방향 |
+| `api_draft.md` | API 제품/개요 초안 | endpoint group, usage intent, consumer-facing API 방향 |
 | `data_contract_draft.md` | 데이터 계약 | core signal, consumer payload, score 정의 |
 | `runtime_scheduling_policy.md` | 런타임 정책 | 장중 제한, batch window, retry/rebuild, runtime mode |
 | `deployment_topology.md` | 배포 토폴로지 | local/laptop/OCI 배포 구조, entrypoint |
@@ -28,7 +37,9 @@
 - 제품 방향은 `master_planning.md`가 우선한다.
 - 아키텍처 경계는 `architecture_specification.md`가 우선한다.
 - 모듈 책임과 dependency direction은 `module_design.md`와 `docs/spec/source_module_spec.md`가 우선한다.
-- API 계약은 `api_draft.md`와 `docs/spec/api_spec.md`가 우선한다.
+- API 제품 방향과 endpoint group은 `api_draft.md`가 우선한다.
+- API 구현 계약은 `docs/spec/api_spec.md`가 우선한다.
+- request/response 필드, 인증, idempotency, error model, pagination/filter/sort, webhook verification이 충돌하면 `docs/spec/api_spec.md`를 따른다.
 - 데이터/저장소 계약은 `data_contract_draft.md`, `docs/spec/data_model_spec.md`, `docs/spec/persistence_spec.md`가 우선한다.
 - 런타임/스케줄 정책은 `runtime_scheduling_policy.md`와 `docs/spec/batch_runtime_spec.md`가 우선한다.
 - 배포 구조는 `deployment_topology.md`가 우선한다.

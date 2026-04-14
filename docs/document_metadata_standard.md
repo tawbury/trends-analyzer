@@ -3,11 +3,11 @@
 ## 1. 문서 메타데이터
 
 - 문서 유형: 문서 관리 기준
-- 상태: Draft v0.3
+- 상태: Draft v0.4
 - 권위 범위: 문서 header 표준, 문서 권위 범위 표시, drift 방지 규칙
 - 상위 문서: `docs_index.md`
 - 관련 문서: `refactoring_notes.md`, `open_decisions.md`
-- 최종 수정일: 2026-04-14
+- 최종 수정일: 2026-04-15
 
 ## 2. 목적
 
@@ -52,14 +52,15 @@
 - `Superseded`: 다른 문서로 대체됨
 - `Deprecated`: 더 이상 사용하지 않음
 
-현재 문서 세트는 구현 전이므로 `Draft v0.3`을 기본으로 둔다.
+현재 문서 세트는 구현 전이므로 `Draft v0.4`를 기본으로 둔다.
 
 ## 6. 충돌 해결 규칙
 
 - 제품 방향 충돌: `master_planning.md` 우선
 - 아키텍처 경계 충돌: `architecture_specification.md` 우선
 - 모듈/소스 구조 충돌: `module_design.md`와 `docs/spec/source_module_spec.md` 우선
-- API 계약 충돌: `api_draft.md`와 `docs/spec/api_spec.md` 우선
+- API 제품 방향 충돌: `api_draft.md` 우선
+- API 구현 계약 충돌: `docs/spec/api_spec.md` 우선
 - 데이터/저장소 충돌: `data_contract_draft.md`, `docs/spec/data_model_spec.md`, `docs/spec/persistence_spec.md` 우선
 - 런타임/스케줄 충돌: `runtime_scheduling_policy.md` 우선
 - 환경 설정 충돌: `environment_config.md` 우선

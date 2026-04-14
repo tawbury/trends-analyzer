@@ -21,6 +21,8 @@ src/
 │   └── use_cases/
 ├── contracts/
 │   ├── api.py
+│   ├── api_requests.py        # optional when API DTO grows
+│   ├── api_responses.py       # optional when API DTO grows
 │   ├── core.py
 │   ├── payloads.py
 │   ├── ports.py
@@ -111,7 +113,9 @@ shared <- all layers
 
 - `core.py`: RawNewsItem, NormalizedNewsItem, NewsEvaluation, MarketSignal, ThemeSignal, StockSignal, TrendSnapshot
 - `payloads.py`: QTSInputPayload, GenericInsightPayload, WorkflowTriggerPayload
-- `api.py`: API request/response DTO, ErrorResponse, pagination DTO
+- `api.py`: transport 전용 API request/response DTO, ErrorResponse, pagination DTO
+- `api_requests.py`: API request DTO가 커질 때 선택적으로 분리
+- `api_responses.py`: API response DTO가 커질 때 선택적으로 분리
 - `runtime.py`: RuntimeMode, JobRequest, JobResult, CorrelationContext
 - `ports.py`: repository, source, dispatch protocol
 
@@ -120,6 +124,7 @@ shared <- all layers
 - Core는 `contracts.core`와 `shared`만 의존한다.
 - Adapter는 `contracts.core`와 `contracts.payloads`에 의존한다.
 - API는 `contracts.api`와 application use case에 의존한다.
+- API transport DTO는 Core signal contract나 Adapter payload contract로 재사용하지 않는다.
 - DB는 `contracts.ports`를 구현한다.
 
 ### 4.0.1 `src/application/use_cases/`
@@ -127,7 +132,7 @@ shared <- all layers
 책임:
 
 - API, Batch, Scheduler에서 호출하는 업무 흐름 orchestration
-- Core 분석, Adapter 변환, Repository 저장, n8n dispatch port 호출 순서 조율
+- ingestion port 호출, Core 분석, Adapter 변환, Repository 저장, dispatch 요청 순서 조율
 - job_id/correlation_id/runtime_mode 전달
 
 금지:
