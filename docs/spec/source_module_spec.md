@@ -1,4 +1,4 @@
-# Source And Module Spec
+# 소스 및 모듈 명세
 
 ## 1. 범위
 
@@ -75,7 +75,7 @@ shared <- all layers
 - `db -> api`
 - `ingestion -> adapters`
 
-## 4. Module Responsibility
+## 4. 모듈 책임
 
 ### 4.1 `src/core/`
 

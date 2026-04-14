@@ -1,4 +1,4 @@
-# Batch And Runtime Spec
+# 배치 및 런타임 명세
 
 ## 1. 범위
 
@@ -11,7 +11,7 @@
 - QTS/Observer 리소스 보호를 우선한다.
 - 로컬 검증 후 OCI 단일 서버의 3번째 앱으로 배포한다.
 
-## 2. Market Hours Guard
+## 2. 장중 보호 가드
 
 금지 시간:
 
@@ -52,7 +52,7 @@ def assert_heavy_job_allowed(now: datetime, job_type: str) -> None:
     ...
 ```
 
-## 3. Batch Jobs
+## 3. Batch Job
 
 초기 job 후보:
 
@@ -66,7 +66,7 @@ def assert_heavy_job_allowed(now: datetime, job_type: str) -> None:
 | `generate_workflow_payload` | n8n payload 생성 | 20:00~23:00 KST |
 | `dispatch_workflow_payload` | n8n 후속 dispatch | 20:00~23:00 KST |
 
-## 4. Batch Runner Rules
+## 4. Batch Runner 규칙
 
 - 모든 job은 실행 직전 `assert_heavy_job_allowed()`를 호출한다.
 - source별 실패가 전체 batch를 불필요하게 중단하지 않도록 실패 범위를 분리한다.
@@ -89,7 +89,7 @@ def assert_heavy_job_allowed(now: datetime, job_type: str) -> None:
 }
 ```
 
-## 5. Scheduler Rules
+## 5. Scheduler 규칙
 
 초기 선택지:
 
@@ -108,7 +108,7 @@ def assert_heavy_job_allowed(now: datetime, job_type: str) -> None:
 - timezone은 KST 기준으로 명시한다.
 - job overlap 방지 정책을 둔다.
 
-## 6. Local Development Runtime
+## 6. 로컬 개발 런타임
 
 목적:
 
@@ -135,7 +135,7 @@ def assert_heavy_job_allowed(now: datetime, job_type: str) -> None:
 5. API 조회 확인
 6. batch dry-run 확인
 
-## 7. OCI Batch Runtime
+## 7. OCI 배치 런타임
 
 목적:
 
@@ -150,7 +150,7 @@ def assert_heavy_job_allowed(now: datetime, job_type: str) -> None:
 - 로그와 job status 저장
 - QTS/Observer 리소스 영향 점검
 
-## 8. API Service Runtime
+## 8. API 서비스 런타임
 
 목적:
 
@@ -173,7 +173,7 @@ def assert_heavy_job_allowed(now: datetime, job_type: str) -> None:
 - request logging
 - rate limit 필요 여부
 
-## 9. n8n Runtime
+## 9. n8n 런타임
 
 목적:
 

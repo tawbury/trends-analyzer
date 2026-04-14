@@ -1,4 +1,4 @@
-# Data Model Spec
+# 데이터 모델 명세
 
 ## 1. 범위
 
@@ -10,7 +10,7 @@
 - Adapter payload는 `TrendSnapshot` 또는 signal을 기준으로 재생성 가능해야 한다.
 - 점수화 기준과 rules/prompt version을 추적할 수 있어야 한다.
 
-## 2. Core Entities
+## 2. Core 엔티티
 
 ### 2.1 RawNewsItem
 
@@ -169,7 +169,7 @@
 - `rules_version`
 - `created_at`
 
-## 3. Adapter Payloads
+## 3. Adapter Payload
 
 ### 3.1 QTSInputPayload
 
@@ -231,7 +231,7 @@ n8n 및 자동화 시스템용 payload.
 - dispatch 실행 결과는 payload와 별도 로그로 저장한다.
 - 장중 대규모 자동화 트리거는 금지한다.
 
-## 4. Versioning
+## 4. 버전 관리
 
 추적 대상:
 

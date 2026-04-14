@@ -27,9 +27,9 @@
 | 항목 | 내용 |
 |------|------|
 | 작업 브랜치 | `main` |
-| 목표 | 뉴스 신뢰도 평가 설계 보강 및 별도 spec 문서 작성 |
-| 최근 완료 | `docs/spec/` 아래 API, source/module, data model, persistence, batch/runtime spec 문서 작성 |
-| 완료 조건 | `docs/development_architecture.md`와 `docs/spec/`에 뉴스 신뢰도 산정 기준, 저장 필드, 운영 검증 규칙 반영 |
+| 목표 | 독립 Trend Intelligence Platform 방향의 개정 문서 세트 작성 |
+| 최근 완료 | 뉴스 신뢰도 평가 설계 보강 및 `docs/spec/news_credibility_spec.md` 작성 |
+| 완료 조건 | master/architecture/module/API/data/runtime/refactoring/open decisions/example appendix 문서가 독립 플랫폼 기준으로 작성됨 |
 
 ## Code Consistency Rules
 

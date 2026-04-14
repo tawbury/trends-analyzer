@@ -1,4 +1,4 @@
-# Persistence Spec
+# 저장소 명세
 
 ## 1. 범위
 
@@ -11,7 +11,7 @@
 - Core 산출물과 Adapter payload를 분리 저장한다.
 - Adapter payload는 `trend_snapshot_id` 기준으로 재생성 가능해야 한다.
 
-## 2. Schema Groups
+## 2. Schema 그룹
 
 ### 2.1 Core Schema
 
@@ -52,7 +52,7 @@
 | `workflow_dispatch_logs` | n8n 또는 downstream dispatch 로그 |
 | `webhook_ingest_logs` | webhook inbound 수신 로그 |
 
-## 3. Relationship Rules
+## 3. 관계 규칙
 
 - `normalized_news.raw_news_id`는 `raw_news.id`를 참조한다.
 - `news_evaluations.normalized_news_id`는 `normalized_news.id`를 참조한다.
@@ -61,7 +61,7 @@
 - QTS/Generic/Workflow payload 테이블은 `trend_snapshot_id`를 보존한다.
 - dispatch log는 `workflow_payload_id`와 dispatch result를 함께 기록한다.
 
-## 4. Repository Rules
+## 4. Repository 규칙
 
 권장 위치:
 
@@ -99,7 +99,7 @@ class SnapshotRepository:
         ...
 ```
 
-## 5. JSONL Local Verification Store
+## 5. JSONL 로컬 검증 저장소
 
 목적:
 
@@ -125,7 +125,7 @@ data/local/
 - 민감 정보나 API token을 저장하지 않는다.
 - PostgreSQL 도입 이후에도 테스트 fixture와 디버그 용도로만 유지한다.
 
-## 6. Migration And Schema Versioning
+## 6. Migration 및 Schema 버전 관리
 
 초기에는 SQL 파일 또는 migration tool을 선택한다.
 
@@ -136,7 +136,7 @@ data/local/
 - destructive migration은 금지하거나 명시 승인 후 수행한다.
 - DB schema 변경 시 `data_model_spec.md`와 `persistence_spec.md`를 함께 갱신한다.
 
-## 7. Retention
+## 7. 보관 정책
 
 초기 제안:
 

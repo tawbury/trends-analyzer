@@ -1,4 +1,4 @@
-# News Credibility Spec
+# 뉴스 신뢰도 명세
 
 ## 1. 범위
 
@@ -41,7 +41,7 @@
 - source tier 변경은 `source_weight` 변화로 이어지므로 사후 분석 가능해야 한다.
 - source tier는 신뢰도의 출발점일 뿐 최종 점수가 아니다.
 
-## 4. Credibility Components
+## 4. 신뢰도 구성 요소
 
 | 구성 요소 | 범위 | 설명 |
 |-----------|------|------|
@@ -53,7 +53,7 @@
 | `conflict_penalty` | 0.0~1.0 | 기존 고신뢰 source와 충돌하는 정도 |
 | `rumor_penalty` | 0.0~1.0 | 루머/추측/익명 출처 표현 강도 |
 
-## 5. Scoring Formula
+## 5. 점수 산식
 
 초기 산식:
 
@@ -78,7 +78,7 @@ confidence_score = clamp(base_score - penalty, 0.0, 1.0)
 - weight 조정 시 `method_version`을 반드시 올린다.
 - LLM을 사용하더라도 LLM 결과는 `content_quality_score`, `evidence_score` 보조 입력으로만 사용하고 최종 산식은 코드로 결정한다.
 
-## 6. Corroboration Rules
+## 6. 교차 검증 규칙
 
 독립 source 판정 기준:
 
@@ -92,7 +92,7 @@ confidence_score = clamp(base_score - penalty, 0.0, 1.0)
 - deduplication 결과의 cluster id를 활용한다.
 - `content_hash`, `canonical_url`, 제목 유사도, source group을 함께 본다.
 
-## 7. Penalty Rules
+## 7. Penalty 규칙
 
 `rumor_penalty` 후보:
 
@@ -107,7 +107,7 @@ confidence_score = clamp(base_score - penalty, 0.0, 1.0)
 - 공식 발표와 상충함
 - 이전 snapshot의 확정 signal과 강하게 충돌하지만 corroboration이 낮음
 
-## 8. Data Contract
+## 8. 데이터 계약
 
 `NewsEvaluation`은 다음 필드를 포함한다.
 
@@ -129,7 +129,7 @@ confidence_score = clamp(base_score - penalty, 0.0, 1.0)
 }
 ```
 
-## 9. Persistence
+## 9. 저장소
 
 저장 방식:
 
@@ -154,7 +154,7 @@ confidence_score = clamp(base_score - penalty, 0.0, 1.0)
 | `method_version` | 산정 방식 버전 |
 | `created_at` | 생성 시각 |
 
-## 10. Adapter Usage
+## 10. Adapter 사용 규칙
 
 QTS Adapter:
 
