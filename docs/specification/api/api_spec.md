@@ -5,15 +5,15 @@
 - 문서 유형: API Implementation Spec
 - 상태: Draft v0.4
 - 권위 범위: `/api/v1` 구현 계약, request/response DTO, auth/idempotency/error/pagination/webhook 규칙
-- 상위 문서: `api_draft.md`
-- 관련 문서: `data_contract_draft.md`, `runtime_scheduling_policy.md`, `environment_config.md`
+- 상위 문서: `docs/specification/api/api_draft.md`
+- 관련 문서: `docs/specification/data/data_contract_draft.md`, `docs/architecture/runtime_scheduling_policy.md`, `docs/architecture/environment_config.md`
 - 최종 수정일: 2026-04-15
 
 ## 1. 범위
 
 이 문서는 Trend Intelligence Platform의 `/api/v1` REST API 계약을 정의한다.
 
-`api_draft.md`는 product-level API 방향과 endpoint group을 설명한다. 이 문서는 구현자가 따라야 할 API 계약의 source of truth다. 두 문서가 충돌하면 request/response 필드, 인증, idempotency, error response, pagination/filter/sort, webhook verification은 이 문서를 우선한다.
+`docs/specification/api/api_draft.md`는 product-level API 방향과 endpoint group을 설명한다. 이 문서는 구현자가 따라야 할 API 계약의 source of truth다. 두 문서가 충돌하면 request/response 필드, 인증, idempotency, error response, pagination/filter/sort, webhook verification은 이 문서를 우선한다.
 
 API 계층의 목적은 다음과 같다.
 

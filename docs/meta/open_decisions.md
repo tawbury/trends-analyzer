@@ -85,6 +85,6 @@
 
 ## 12. Documentation Governance
 
-- 기존 문서 전체에 `document_metadata_standard.md` header를 일괄 적용할지, 다음 큰 수정 시점부터 점진 적용할지 결정해야 한다.
+- 기존 문서 전체에 `docs/meta/document_metadata_standard.md` header를 일괄 적용할지, 다음 큰 수정 시점부터 점진 적용할지 결정해야 한다.
 - 문서 version을 파일별로 관리할지 릴리즈 단위로 관리할지 결정해야 한다.
 - 문서 변경이 구현 변경과 같은 PR/commit에 들어가야 하는지 분리해야 하는지 기준을 정해야 한다.

@@ -5,15 +5,15 @@
 - 문서 유형: API Product Draft
 - 상태: Draft v0.4
 - 권위 범위: API endpoint group, product-level usage intent, consumer-facing API 방향
-- 상위 문서: `architecture_specification.md`
-- 관련 문서: `docs/spec/api_spec.md`, `data_contract_draft.md`, `runtime_scheduling_policy.md`
+- 상위 문서: `docs/architecture/architecture_specification.md`
+- 관련 문서: `docs/specification/api/api_spec.md`, `docs/specification/data/data_contract_draft.md`, `docs/architecture/runtime_scheduling_policy.md`
 - 최종 수정일: 2026-04-15
 
 ## 0. 문서 역할
 
 이 문서는 API의 제품/개요 수준 초안이다. endpoint group, 사용 의도, 소비자별 API 경계를 설명한다.
 
-구현 시 상세 계약의 source of truth는 `docs/spec/api_spec.md`다. request/response 필드, 인증, idempotency, error model, pagination/filter/sort 규칙이 충돌하면 `docs/spec/api_spec.md`를 우선한다.
+구현 시 상세 계약의 source of truth는 `docs/specification/api/api_spec.md`다. request/response 필드, 인증, idempotency, error model, pagination/filter/sort 규칙이 충돌하면 `docs/specification/api/api_spec.md`를 우선한다.
 
 ## 1. API 설계 원칙
 

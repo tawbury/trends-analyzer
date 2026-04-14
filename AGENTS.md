@@ -18,7 +18,7 @@
 > 이 규칙을 건너뛰면 컨텍스트 불일치로 구조와 코드 패턴이 어긋날 수 있으므로 생략하지 않는다.
 
 이 파일은 현재 폴더 `/home/tawbu/projects/trends-analyzer` 및 그 하위 폴더에서 Codex가 우선 적용해야 할 프로젝트 전용 작업 규칙이다.
-기준 문서는 `docs/trend_intelligence_platform_draft_v_0.md`이다.
+문서 구조와 권위 기준은 `docs/meta/docs_index.md`를 따른다.
 
 ## Current Goal
 
@@ -109,8 +109,8 @@
 
 1. 현재 프로젝트 코드와 실제 파일 구조
 2. 이 `AGENTS.md`
-3. `docs/trend_intelligence_platform_draft_v_0.md`
-4. 기타 `docs/` 설계 문서
+3. `docs/meta/docs_index.md`
+4. `docs/architecture/` 및 `docs/specification/` 권위 문서
 5. 환경별 설정 파일
 
 코드와 문서가 충돌하면 현재 코드와 실제 런타임 동작을 먼저 확인하고, 문서를 갱신해야 하는지 별도로 판단한다.

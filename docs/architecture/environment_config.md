@@ -5,8 +5,8 @@
 - 문서 유형: 운영/환경 설정 기준
 - 상태: Draft v0.3
 - 권위 범위: local/laptop/OCI 설정 차이, 환경 변수 그룹, feature flag, runtime mode 설정
-- 상위 문서: `deployment_topology.md`, `runtime_scheduling_policy.md`
-- 관련 문서: `architecture_specification.md`, `observability_ops.md`, `docs/spec/source_module_spec.md`
+- 상위 문서: `docs/architecture/deployment_topology.md`, `docs/architecture/runtime_scheduling_policy.md`
+- 관련 문서: `docs/architecture/architecture_specification.md`, `docs/architecture/observability_ops.md`, `docs/specification/source/source_module_spec.md`
 - 최종 수정일: 2026-04-14
 
 ## 2. 목적

@@ -2,7 +2,7 @@
 
 ## 1. 문서 목적
 
-이 문서는 `trend_intelligence_platform_draft_v_0.md`를 구현 관점으로 재정리한 개발용 아키텍처 문서다.
+이 문서는 `docs/appendix/trend_intelligence_platform_draft_v_0.md`를 구현 관점으로 재정리한 개발용 아키텍처 문서다.
 
 목표는 다음과 같다.
 

@@ -99,7 +99,7 @@ python -m src.scheduler.main
 
 ## 8. 환경 설정 연결
 
-환경별 runtime flag와 secret/config 경계는 `environment_config.md`를 따른다.
+환경별 runtime flag와 secret/config 경계는 `docs/architecture/environment_config.md`를 따른다.
 
 배포 토폴로지가 바뀌어도 다음 설정 경계는 유지한다.
 

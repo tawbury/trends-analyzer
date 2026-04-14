@@ -5,8 +5,8 @@
 - 문서 유형: 문서 관리 기준
 - 상태: Draft v0.4
 - 권위 범위: 문서 header 표준, 문서 권위 범위 표시, drift 방지 규칙
-- 상위 문서: `docs_index.md`
-- 관련 문서: `refactoring_notes.md`, `open_decisions.md`
+- 상위 문서: `docs/meta/docs_index.md`
+- 관련 문서: `docs/meta/refactoring_notes.md`, `docs/meta/open_decisions.md`
 - 최종 수정일: 2026-04-15
 
 ## 2. 목적
@@ -25,8 +25,8 @@
 - 문서 유형: Architecture Spec
 - 상태: Draft v0.3
 - 권위 범위: 계층, 경계, dependency direction
-- 상위 문서: `master_planning.md`
-- 관련 문서: `module_design.md`, `docs/spec/source_module_spec.md`
+- 상위 문서: `docs/architecture/master_planning.md`
+- 관련 문서: `docs/architecture/module_design.md`, `docs/specification/source/source_module_spec.md`
 - 최종 수정일: 2026-04-14
 ```
 
@@ -56,15 +56,15 @@
 
 ## 6. 충돌 해결 규칙
 
-- 제품 방향 충돌: `master_planning.md` 우선
-- 아키텍처 경계 충돌: `architecture_specification.md` 우선
-- 모듈/소스 구조 충돌: `module_design.md`와 `docs/spec/source_module_spec.md` 우선
-- API 제품 방향 충돌: `api_draft.md` 우선
-- API 구현 계약 충돌: `docs/spec/api_spec.md` 우선
-- 데이터/저장소 충돌: `data_contract_draft.md`, `docs/spec/data_model_spec.md`, `docs/spec/persistence_spec.md` 우선
-- 런타임/스케줄 충돌: `runtime_scheduling_policy.md` 우선
-- 환경 설정 충돌: `environment_config.md` 우선
-- 문서에서 코드 위치로의 추적성 충돌: `implementation_traceability.md` 우선
+- 제품 방향 충돌: `docs/architecture/master_planning.md` 우선
+- 아키텍처 경계 충돌: `docs/architecture/architecture_specification.md` 우선
+- 모듈/소스 구조 충돌: `docs/architecture/module_design.md`와 `docs/specification/source/source_module_spec.md` 우선
+- API 제품 방향 충돌: `docs/specification/api/api_draft.md` 우선
+- API 구현 계약 충돌: `docs/specification/api/api_spec.md` 우선
+- 데이터/저장소 충돌: `docs/specification/data/data_contract_draft.md`, `docs/specification/data/data_model_spec.md`, `docs/specification/data/persistence_spec.md` 우선
+- 런타임/스케줄 충돌: `docs/architecture/runtime_scheduling_policy.md` 우선
+- 환경 설정 충돌: `docs/architecture/environment_config.md` 우선
+- 문서에서 코드 위치로의 추적성 충돌: `docs/meta/implementation_traceability.md` 우선
 
 충돌을 발견하면 참조 문서만 고치지 말고 권위 문서를 먼저 수정한다.
 
@@ -73,6 +73,6 @@
 - 문서 수정 시 해당 문서의 권위 범위를 먼저 확인한다.
 - 새 endpoint는 API 문서와 spec 문서를 함께 수정한다.
 - 새 source module은 module design과 source module spec을 함께 수정한다.
-- 새 환경 변수는 `environment_config.md`를 먼저 갱신한다.
-- 새 source file/directory가 문서 개념을 구현하면 `implementation_traceability.md` 매핑을 확인한다.
+- 새 환경 변수는 `docs/architecture/environment_config.md`를 먼저 갱신한다.
+- 새 source file/directory가 문서 개념을 구현하면 `docs/meta/implementation_traceability.md` 매핑을 확인한다.
 - 문서의 권위 범위를 벗어난 내용을 추가해야 한다면 관련 권위 문서 링크를 남긴다.

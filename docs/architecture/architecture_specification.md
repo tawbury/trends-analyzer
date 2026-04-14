@@ -5,8 +5,8 @@
 - 문서 유형: Architecture Specification
 - 상태: Draft v0.4
 - 권위 범위: 시스템 컨텍스트, 계층 경계, dependency direction, runtime/integration boundary
-- 상위 문서: `master_planning.md`
-- 관련 문서: `module_design.md`, `docs/spec/source_module_spec.md`, `runtime_scheduling_policy.md`
+- 상위 문서: `docs/architecture/master_planning.md`
+- 관련 문서: `docs/architecture/module_design.md`, `docs/specification/source/source_module_spec.md`, `docs/architecture/runtime_scheduling_policy.md`
 - 최종 수정일: 2026-04-15
 
 ## 1. 시스템 컨텍스트

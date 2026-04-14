@@ -81,7 +81,7 @@
 - 기본 범위는 `0.0 <= score <= 1.0`이다.
 - `sentiment_score`는 필요 시 `-1.0 <= sentiment_score <= 1.0`를 허용할 수 있으나, API와 DB schema에 명시해야 한다.
 - `confidence_score`는 `credibility_breakdown`의 구성 요소를 결합한 최종값이어야 한다.
-- 신뢰도 세부 기준은 `news_credibility_spec.md`를 따른다.
+- 신뢰도 세부 기준은 `docs/specification/data/news_credibility_spec.md`를 따른다.
 
 `credibility_breakdown` 예시:
 

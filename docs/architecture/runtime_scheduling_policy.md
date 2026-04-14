@@ -5,8 +5,8 @@
 - 문서 유형: Runtime & Scheduling Policy
 - 상태: Draft v0.4
 - 권위 범위: runtime mode, 장중 제한, batch window, retry/rebuild, dispatch 실행 정책
-- 상위 문서: `architecture_specification.md`
-- 관련 문서: `deployment_topology.md`, `environment_config.md`, `observability_ops.md`
+- 상위 문서: `docs/architecture/architecture_specification.md`
+- 관련 문서: `docs/architecture/deployment_topology.md`, `docs/architecture/environment_config.md`, `docs/architecture/observability_ops.md`
 - 최종 수정일: 2026-04-15
 
 ## 1. 목적

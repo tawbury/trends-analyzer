@@ -5,8 +5,8 @@
 - 문서 유형: Data Contract Draft
 - 상태: Draft v0.4
 - 권위 범위: Core signal contract, consumer payload contract, score/entity 정의, DTO 분리 원칙
-- 상위 문서: `architecture_specification.md`
-- 관련 문서: `docs/spec/data_model_spec.md`, `docs/spec/persistence_spec.md`, `docs/spec/api_spec.md`
+- 상위 문서: `docs/architecture/architecture_specification.md`
+- 관련 문서: `docs/specification/data/data_model_spec.md`, `docs/specification/data/persistence_spec.md`, `docs/specification/api/api_spec.md`
 - 최종 수정일: 2026-04-15
 
 ## 1. 계약 원칙

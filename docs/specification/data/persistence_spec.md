@@ -128,7 +128,7 @@ data/local/
 규칙:
 
 - 운영 저장소로 사용하지 않는다.
-- JSONL schema는 `data_model_spec.md`의 계약을 따른다.
+- JSONL schema는 `docs/specification/data/data_model_spec.md`의 계약을 따른다.
 - 민감 정보나 API token을 저장하지 않는다.
 - PostgreSQL 도입 이후에도 테스트 fixture와 디버그 용도로만 유지한다.
 
@@ -141,7 +141,7 @@ data/local/
 - `src/db/schema/` 아래 DDL 초안을 둔다.
 - schema version table을 둔다.
 - destructive migration은 금지하거나 명시 승인 후 수행한다.
-- DB schema 변경 시 `data_model_spec.md`와 `persistence_spec.md`를 함께 갱신한다.
+- DB schema 변경 시 `docs/specification/data/data_model_spec.md`와 `docs/specification/data/persistence_spec.md`를 함께 갱신한다.
 
 ## 7. 보관 정책
 

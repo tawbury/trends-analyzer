@@ -5,8 +5,8 @@
 - 문서 유형: Module Design
 - 상태: Draft v0.4
 - 권위 범위: 모듈 책임, UseCase/Adapter/Gateway/Dispatch/Port 경계
-- 상위 문서: `architecture_specification.md`
-- 관련 문서: `docs/spec/source_module_spec.md`, `data_contract_draft.md`, `runtime_scheduling_policy.md`
+- 상위 문서: `docs/architecture/architecture_specification.md`
+- 관련 문서: `docs/specification/source/source_module_spec.md`, `docs/specification/data/data_contract_draft.md`, `docs/architecture/runtime_scheduling_policy.md`
 - 최종 수정일: 2026-04-15
 
 ## 1. 모듈 설계 원칙
