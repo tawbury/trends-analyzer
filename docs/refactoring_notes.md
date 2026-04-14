@@ -70,6 +70,44 @@
 - `news_credibility_spec.md`를 추가했다.
 - source tier, evidence, corroboration, content quality, freshness, penalty 기반 산식을 제안했다.
 
+### 2.8 UseCase 계층이 구조적으로 고정되지 않았음
+
+API, Batch, Scheduler가 Core/Adapter를 직접 조합할 수 있는 여지가 있었다.
+
+보정:
+
+- `application/use_cases`를 orchestration boundary로 명시했다.
+- API route, batch runner, scheduler는 UseCase를 호출하고 Core/Adapter 직접 조합을 피하도록 문서화했다.
+
+### 2.9 Contracts 계층이 추상적으로만 언급되었음
+
+계약이라는 용어는 있었지만 core signal, payload, API DTO, runtime/job 계약이 어디에 위치해야 하는지 불명확했다.
+
+보정:
+
+- `src/contracts/`를 전용 계층으로 추가했다.
+- `core.py`, `payloads.py`, `api.py`, `runtime.py`, `ports.py`로 분리했다.
+
+### 2.10 Workflow 명칭이 과부하되어 있었음
+
+Workflow Adapter, n8n gateway, dispatch runtime이 모두 workflow로 뭉쳐 보일 수 있었다.
+
+보정:
+
+- Workflow Adapter는 payload mapping만 담당한다고 명시했다.
+- n8n HTTP/webhook/dispatch는 `integration/n8n` 책임으로 분리했다.
+- runtime dispatch는 UseCase와 integration port를 통해 수행하도록 정리했다.
+
+### 2.11 운영/관측성과 배포 토폴로지가 약했음
+
+초기 OCI 단일 서버 운영에서 필요한 로그, job id, health/readiness, entrypoint가 부족했다.
+
+보정:
+
+- `observability_ops.md`를 추가했다.
+- `deployment_topology.md`를 추가했다.
+- `docs_index.md`로 문서 권위 기준을 정리했다.
+
 ## 3. 이번 개정에서 변경한 구조
 
 신규/개정 문서:
@@ -83,6 +121,9 @@
 - `refactoring_notes.md`
 - `example_code_appendix.md`
 - `open_decisions.md`
+- `observability_ops.md`
+- `deployment_topology.md`
+- `docs_index.md`
 - `docs/spec/*`
 
 ## 4. 아직 남은 구현 의사결정

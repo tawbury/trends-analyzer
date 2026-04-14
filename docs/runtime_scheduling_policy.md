@@ -13,6 +13,13 @@
 - `WEBHOOK_INBOUND`: n8n inbound 수신
 - `WORKFLOW_DISPATCH`: downstream workflow trigger
 
+런타임 실행 원칙:
+
+- API route는 UseCase를 호출한다.
+- Batch Worker는 UseCase를 호출한다.
+- Scheduler는 Batch Worker 또는 UseCase trigger만 호출한다.
+- Core와 Adapter 직접 조합은 `application/use_cases`에서만 수행한다.
+
 ## 3. 한국 장중 제한
 
 장중 기준:
@@ -87,6 +94,18 @@
 - CPU/메모리 상한 적용
 - 장중 heavy job 비활성화
 - QTS/Observer 리소스 영향 모니터링
+
+초기 topology:
+
+- 단일 Docker image를 우선한다.
+- 동일 image에서 `api`, `worker`, `scheduler` entrypoint를 분리한다.
+- 운영 복잡도를 낮추기 위해 단일 서버/단일 이미지로 시작하되, runtime process는 분리 가능한 구조를 유지한다.
+
+권장 entrypoint:
+
+- `python -m src.api.app`
+- `python -m src.batch.runner --mode daily`
+- `python -m src.scheduler.main`
 
 ## 9. 서버 분리 또는 QTS 내장 재검토 기준
 

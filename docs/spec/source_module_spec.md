@@ -8,13 +8,23 @@
 
 - Trend Core는 단일 소스 오브 트루스다.
 - Adapter는 소비자별 포맷 변환만 담당한다.
-- API는 요청/응답 경계와 실행 진입점만 담당한다.
-- Batch/Scheduler는 장외 실행과 job orchestration만 담당한다.
+- Application UseCase는 API, Batch, Scheduler의 orchestration boundary다.
+- Contracts는 Core/Adapter/API/DB/runtime의 계층 간 계약을 고정한다.
+- API는 요청/응답 경계와 실행 진입점만 담당하고 UseCase를 호출한다.
+- Batch/Scheduler는 장외 실행과 job trigger만 담당하고 Core/Adapter를 직접 조합하지 않는다.
 
 ## 2. 권장 디렉토리 구조
 
 ```text
 src/
+├── application/
+│   └── use_cases/
+├── contracts/
+│   ├── api.py
+│   ├── core.py
+│   ├── payloads.py
+│   ├── ports.py
+│   └── runtime.py
 ├── adapters/
 │   ├── generic/
 │   ├── qts/
@@ -42,12 +52,13 @@ src/
 │   ├── clients/
 │   ├── loaders/
 │   └── webhook.py
+├── integration/
+│   └── n8n/
 ├── scheduler/
 ├── shared/
 │   ├── clock.py
 │   ├── market_hours.py
 │   └── logging.py
-└── workflow/
 ```
 
 ## 3. 의존 방향
@@ -55,14 +66,19 @@ src/
 허용 방향:
 
 ```text
-api -> adapters -> core
-api -> batch
-batch -> ingestion -> core -> db
-batch -> adapters -> db
-scheduler -> batch
+api -> application
+batch -> application
+scheduler -> batch 또는 application
+application -> core
+application -> adapters
+application -> contracts.ports
+application -> integration/n8n ports
 adapters -> contracts
 core -> contracts
-db -> contracts
+core -> shared
+integration/n8n -> contracts.payloads
+integration/n8n -> contracts.ports
+db -> contracts.ports
 shared <- all layers
 ```
 
@@ -72,10 +88,46 @@ shared <- all layers
 - `core -> api`
 - `core -> scheduler`
 - `core -> workflow dispatch`
+- `api -> core`
+- `api -> adapters`
+- `batch -> core`
+- `batch -> adapters`
 - `db -> api`
 - `ingestion -> adapters`
+- `adapters -> api`
 
 ## 4. 모듈 책임
+
+### 4.0 `src/contracts/`
+
+책임:
+
+- `core.py`: RawNewsItem, NormalizedNewsItem, NewsEvaluation, MarketSignal, ThemeSignal, StockSignal, TrendSnapshot
+- `payloads.py`: QTSInputPayload, GenericInsightPayload, WorkflowTriggerPayload
+- `api.py`: API request/response DTO, ErrorResponse, pagination DTO
+- `runtime.py`: RuntimeMode, JobRequest, JobResult, CorrelationContext
+- `ports.py`: repository, source, dispatch protocol
+
+규칙:
+
+- Core는 `contracts.core`와 `shared`만 의존한다.
+- Adapter는 `contracts.core`와 `contracts.payloads`에 의존한다.
+- API는 `contracts.api`와 application use case에 의존한다.
+- DB는 `contracts.ports`를 구현한다.
+
+### 4.0.1 `src/application/use_cases/`
+
+책임:
+
+- API, Batch, Scheduler에서 호출하는 업무 흐름 orchestration
+- Core 분석, Adapter 변환, Repository 저장, n8n dispatch port 호출 순서 조율
+- job_id/correlation_id/runtime_mode 전달
+
+금지:
+
+- Core score 알고리즘 구현
+- Adapter payload mapping 구현
+- HTTP/webhook 세부 처리 구현
 
 ### 4.1 `src/core/`
 
@@ -148,6 +200,21 @@ shared <- all layers
 - HTTP dispatch 직접 수행
 - 대량 자동화 정책 우회
 
+### 4.4.1 `src/integration/n8n/`
+
+책임:
+
+- inbound webhook 검증 및 수신
+- outbound dispatch 실행
+- dispatch result 기록
+- n8n retry/failure 상태 수집
+
+금지:
+
+- WorkflowTriggerPayload mapping 구현
+- Core signal 계산
+- Generic briefing 생성
+
 ### 4.5 `src/api/`
 
 책임:
@@ -160,6 +227,7 @@ shared <- all layers
 금지:
 
 - Core 알고리즘 구현
+- Core/Adapter 직접 orchestration
 - DB query를 route 함수에 직접 작성
 - 장중 보호 가드 우회
 
@@ -167,8 +235,8 @@ shared <- all layers
 
 책임:
 
-- batch job orchestration
-- source ingest -> core analyze -> adapter generation 순서 제어
+- batch job trigger
+- use case 실행
 - job status와 실패 사유 기록
 
 필수:
@@ -225,8 +293,11 @@ shared <- all layers
 ## 5. 파일 생성 규칙
 
 - 새 데이터 계약은 가능하면 `contracts.py` 또는 역할별 `schemas.py`에 둔다.
+- 새 계약은 우선 `src/contracts/`에 둔다.
+- 새 업무 흐름은 `src/application/use_cases/`에 둔다.
 - 새 알고리즘은 `src/core/`에 두고 adapter나 API에 중복 구현하지 않는다.
 - 새 소비자 포맷은 `src/adapters/{consumer}/`에 둔다.
+- 새 n8n gateway 로직은 `src/integration/n8n/`에 둔다.
 - 새 API route는 `src/api/routes/{group}.py`에 둔다.
 - 새 batch job은 `src/batch/jobs/{job_name}.py`에 둔다.
 - 새 scheduler 설정은 `src/scheduler/`에 둔다.

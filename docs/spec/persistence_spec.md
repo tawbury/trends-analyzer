@@ -10,6 +10,8 @@
 - JSONL은 초기 로컬 검증과 장애 분석 보조 용도로만 사용한다.
 - Core 산출물과 Adapter payload를 분리 저장한다.
 - Adapter payload는 `trend_snapshot_id` 기준으로 재생성 가능해야 한다.
+- DB 계층은 `src/contracts/ports.py`의 repository protocol을 구현한다.
+- DB 모델은 API DTO에 의존하지 않는다.
 
 ## 2. Schema 그룹
 
@@ -66,6 +68,7 @@
 권장 위치:
 
 ```text
+src/contracts/ports.py
 src/db/repositories/
 ├── raw_news_repository.py
 ├── normalized_news_repository.py
@@ -82,6 +85,9 @@ src/db/repositories/
 
 - API route에서 SQL을 직접 작성하지 않는다.
 - Core에서 직접 connection을 관리하지 않는다.
+- Application UseCase는 repository protocol에 의존하고, 실제 PostgreSQL 구현은 dependency injection으로 주입한다.
+- Repository 구현은 `contracts.core`, `contracts.payloads`, `contracts.ports`에만 의존한다.
+- Repository 구현은 FastAPI request/response DTO에 의존하지 않는다.
 - repository는 명시적 method 이름을 사용한다.
 - batch job은 repository 또는 service 계층을 통해 저장한다.
 - write 작업은 가능한 한 idempotent key를 가진다.

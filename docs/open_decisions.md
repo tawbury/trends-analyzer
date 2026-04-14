@@ -54,3 +54,15 @@
 - Codex, Claude Code, Gemini CLI가 공유할 문서 업데이트 규칙을 확정해야 한다.
 - spec 변경 시 PR 또는 commit message convention을 정해야 한다.
 - 테스트 fixture용 샘플 뉴스 세트를 어디에 둘지 결정해야 한다.
+
+## 9. Application / Contracts 경계
+
+- 계약 모델을 dataclass로 시작할지 pydantic model로 시작할지 결정해야 한다.
+- `src/contracts/api.py`의 DTO와 FastAPI request/response model을 동일하게 둘지 분리할지 결정해야 한다.
+- UseCase dependency injection 방식을 수동 factory로 둘지 DI container를 도입할지 결정해야 한다.
+
+## 10. Observability
+
+- 구조화 로그 포맷을 JSON으로 고정할지 결정해야 한다.
+- job status 저장소를 PostgreSQL에 둘지 JSONL 보조 저장소에도 남길지 결정해야 한다.
+- readiness endpoint를 MVP에 포함할지 결정해야 한다.

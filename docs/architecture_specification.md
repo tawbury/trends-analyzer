@@ -22,6 +22,9 @@ News Sources / n8n Inbound
 Ingestion Layer
         |
         v
+Application / UseCase Layer
+        |
+        v
 Trend Core
   - normalize
   - deduplicate
@@ -66,7 +69,22 @@ Consumers
 - QTS payload 생성
 - workflow routing 결정
 
-### 3.2 Trend Core
+### 3.2 Application / UseCase Layer
+
+역할:
+
+- API, Batch Worker, Scheduler가 직접 Core/Adapter/Repository를 조합하지 않도록 orchestration boundary를 제공한다.
+- `AnalyzeDailyTrendsUseCase`, `GenerateQtsPayloadUseCase`, `GenerateWorkflowPayloadUseCase`, `DispatchWorkflowPayloadUseCase`처럼 업무 흐름 단위로 의존성을 조합한다.
+- transaction boundary, job/correlation id 전달, market-hours guard 이후 실행 흐름, 저장 순서를 명확히 한다.
+
+UseCase가 필요한 이유:
+
+- API route가 얇게 유지된다.
+- batch runner가 분석 알고리즘이나 adapter mapping을 직접 알지 않아도 된다.
+- scheduler가 job 실행 시점만 결정하고 업무 흐름은 use case에 위임한다.
+- Core와 Adapter가 서로를 직접 호출하지 않고 application 계층이 조율한다.
+
+### 3.3 Trend Core
 
 역할:
 
@@ -84,7 +102,7 @@ Core boundary:
 - Core는 브리핑 문장을 최종 포맷으로 생성하지 않는다.
 - Core output은 소비자 독립적인 neutral signal model이어야 한다.
 
-### 3.3 Adapter Layer
+### 3.4 Adapter Layer
 
 역할:
 
@@ -102,7 +120,7 @@ Adapter boundary:
 - Adapter는 Core 알고리즘을 재구현하지 않는다.
 - Adapter는 자신의 consumer payload만 책임진다.
 
-### 3.4 API Layer
+### 3.5 API Layer
 
 역할:
 
@@ -120,7 +138,22 @@ API-first가 필요한 이유:
 - 로컬 검증과 OCI 운영 검증이 같은 계약을 사용한다.
 - 추후 별도 서버 분리 시 외부 계약을 유지할 수 있다.
 
-### 3.5 Runtime Layer
+### 3.6 Integration / n8n Layer
+
+역할:
+
+- n8n inbound webhook 수신
+- webhook signature 또는 token 검증
+- Workflow Adapter가 만든 payload를 downstream n8n workflow로 dispatch
+- dispatch result, retry 대상, failure reason 기록
+
+중요 경계:
+
+- Workflow Adapter는 payload mapping만 수행한다.
+- `integration/n8n`은 HTTP/webhook/dispatch와 verification을 수행한다.
+- runtime dispatch 정책은 Batch/UseCase 또는 integration runtime에서 수행한다.
+
+### 3.7 Runtime Layer
 
 역할:
 
@@ -144,10 +177,13 @@ Runtime boundary:
 
 ```text
 src/api/        -> API service runtime
+src/application/-> use case orchestration
 src/batch/      -> batch worker runtime
 src/scheduler/  -> schedule runtime
 src/ingestion/  -> ingestion runtime
 src/adapters/   -> reusable mapping layer
+src/contracts/  -> cross-layer contracts
+src/integration/-> external system gateway
 src/core/       -> pure analysis core
 ```
 

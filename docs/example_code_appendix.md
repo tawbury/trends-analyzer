@@ -140,6 +140,85 @@ class AnalyzeDailyTrendsUseCase:
         return snapshot
 ```
 
+UseCase는 API route나 batch runner가 Core/Adapter/Repository를 직접 조합하지 않도록 하는 경계다.
+
+```python
+from dataclasses import dataclass
+
+
+@dataclass(frozen=True)
+class AnalyzeDailyCommand:
+    as_of: datetime
+    requested_by: str
+    correlation_id: str
+
+
+class GenerateQtsPayloadUseCase:
+    def __init__(self, snapshots, qts_adapter, payloads):
+        self.snapshots = snapshots
+        self.qts_adapter = qts_adapter
+        self.payloads = payloads
+
+    async def execute(self, snapshot_id: str, correlation_id: str) -> QtsInputPayload:
+        snapshot = await self.snapshots.get(snapshot_id)
+        payload = self.qts_adapter.convert(snapshot)
+        await self.payloads.save_qts_payload(payload, correlation_id=correlation_id)
+        return payload
+```
+
+## 5.1 계약 분리 예시
+
+```python
+from dataclasses import dataclass
+from typing import Protocol
+
+
+# src/contracts/core.py
+@dataclass(frozen=True)
+class CoreStockSignal:
+    symbol: str
+    impact_score: float
+    confidence_score: float
+
+
+# src/contracts/payloads.py
+@dataclass(frozen=True)
+class WorkflowTriggerPayload:
+    trigger_type: str
+    priority: str
+    recommended_actions: list[str]
+
+
+# src/contracts/ports.py
+class SnapshotRepository(Protocol):
+    async def get(self, snapshot_id: str) -> TrendSnapshot:
+        ...
+```
+
+## 5.2 Workflow Payload와 Dispatch Runtime 분리 예시
+
+```python
+class WorkflowAdapter:
+    def convert(self, snapshot: TrendSnapshot) -> WorkflowTriggerPayload:
+        return WorkflowTriggerPayload(
+            trigger_type="trend_snapshot_ready",
+            priority="normal",
+            recommended_actions=["publish_briefing"],
+        )
+
+
+class N8nDispatchGateway:
+    def __init__(self, http_client):
+        self.http_client = http_client
+
+    async def dispatch(self, payload: WorkflowTriggerPayload, correlation_id: str) -> str:
+        response = await self.http_client.post(
+            "/webhook/trends",
+            json={"payload": payload, "correlation_id": correlation_id},
+        )
+        return response.headers["X-Dispatch-Id"]
+```
+
 ## 6. FastAPI Route 예시
 
 ```python
@@ -155,6 +234,25 @@ async def analyze_daily(
 ):
     snapshot = await use_case.execute(as_of=current_kst_time())
     return {"snapshot_id": snapshot.id, "status": "created"}
+```
+
+## 6.1 Error Response Model 예시
+
+```python
+from dataclasses import dataclass
+
+
+@dataclass(frozen=True)
+class ErrorBody:
+    code: str
+    message: str
+    details: dict[str, str]
+
+
+@dataclass(frozen=True)
+class ErrorResponse:
+    error: ErrorBody
+    correlation_id: str
 ```
 
 ## 7. 스케줄링 정책 예시
@@ -176,6 +274,31 @@ def is_korean_market_hours(now: datetime) -> bool:
 def assert_heavy_job_allowed(now: datetime, job_type: str) -> None:
     if is_korean_market_hours(now):
         raise RuntimeError(f"{job_type} is blocked during KST market hours")
+```
+
+Batch runner에서는 guard를 UseCase 실행 직전에 적용한다.
+
+```python
+async def run_daily_job(use_case: AnalyzeDailyTrendsUseCase, command: AnalyzeDailyCommand) -> TrendSnapshot:
+    assert_heavy_job_allowed(command.as_of, job_type="daily")
+    return await use_case.execute(as_of=command.as_of)
+```
+
+## 7.1 Job / Correlation ID 구조 예시
+
+```python
+from dataclasses import dataclass
+
+
+@dataclass(frozen=True)
+class CorrelationContext:
+    correlation_id: str
+    job_id: str | None
+    requested_by: str
+
+
+def build_job_id(date_key: str, job_type: str, sequence: int) -> str:
+    return f"job_{date_key}_{job_type}_{sequence:03d}"
 ```
 
 ## 8. Runtime Mode Enum 예시
