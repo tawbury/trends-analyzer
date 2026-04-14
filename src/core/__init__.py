@@ -1,0 +1,1 @@
+"""Consumer-agnostic trend core."""
