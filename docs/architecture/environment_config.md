@@ -151,6 +151,10 @@ Phase 1 실데이터 검증에서는 fixture, KIS, Kiwoom을 설정으로 조합
 | `TRENDS_SOURCE_SYMBOLS` | `005930,000660` | KIS/Kiwoom 검증 대상 종목 코드 |
 | `TRENDS_SOURCE_TIMEOUT_SECONDS` | `10` | provider HTTP 요청 timeout |
 | `TRENDS_SOURCE_PARTIAL_SUCCESS` | `true` | 일부 소스 실패 시 나머지 소스 결과로 분석 지속 |
+| `TRENDS_SYMBOL_CATALOG_SOURCE` | `kis_master` | symbol catalog 갱신 원천. `kis_master` 또는 임시 bridge용 `json_artifact` |
+| `TRENDS_SYMBOL_CATALOG_PATH` | path | `json_artifact` 사용 시 읽을 Observer/외부 symbol artifact 경로 |
+| `TRENDS_SYMBOL_CATALOG_MARKETS` | `KOSPI,KOSDAQ,KONEX` | catalog에 포함할 시장 구분 |
+| `TRENDS_SYMBOL_CATALOG_URL` | empty | 예약 필드. 기본 `kis_master` 모드는 KIS 공식 MST ZIP 경로를 시장별로 사용 |
 | `KIS_APP_KEY` | secret | KIS Open API app key |
 | `KIS_APP_SECRET` | secret | KIS Open API app secret |
 | `KIS_BASE_URL` | `https://openapi.koreainvestment.com:9443` | KIS 운영/모의투자 base URL |
@@ -168,6 +172,8 @@ Phase 1 실데이터 검증에서는 fixture, KIS, Kiwoom을 설정으로 조합
 | `KIWOOM_STOCK_INFO_PATH` | `/api/dostk/stkinfo` | Kiwoom 주식기본정보 요청 path |
 
 KIS와 Kiwoom은 현재 Trend Core가 요구하는 완전한 뉴스 원천이 아니라 시세/종목 정보 성격이 강하다. KIS는 종목코드 기반 `invest-opinion` 응답을 우선 사용하고, 응답이 없으면 현재가 quote를 fallback으로 사용한다. 따라서 Phase 1에서는 “research/market-data-derived raw item”으로 `RawNewsItem`에 매핑하고 provider 원문은 `metadata.provider_payload`에 보존한다. 뉴스 본문이 없는 경우 투자 의견, 목표가, 가격, 등락률, 거래량을 조합해 `body` fallback을 만든다.
+
+Symbol catalog는 QTS/Observer의 universe snapshot을 직접 재사용하지 않는다. Observer universe는 전일종가 4000원 미만 제외 등 QTS 매매 유니버스 정책을 포함할 수 있으므로 뉴스/트렌드 분석용 전체 종목 catalog에는 부적합하다. trends-analyzer는 기본적으로 KIS official stock master MST ZIP을 독립 catalog 원천으로 사용하고, `json_artifact`는 운영 전환 전 임시 bridge로만 사용한다.
 
 ## 13. 예시 `.env.local`
 
@@ -230,6 +236,8 @@ SOURCE_TIER_CONFIG_PATH=config/source_tiers.yaml
 TRENDS_ACTIVE_SOURCES=kis,kiwoom
 TRENDS_SOURCE_SYMBOLS=005930,000660
 TRENDS_SOURCE_PARTIAL_SUCCESS=true
+TRENDS_SYMBOL_CATALOG_SOURCE=kis_master
+TRENDS_SYMBOL_CATALOG_MARKETS=KOSPI,KOSDAQ,KONEX
 KIS_BASE_URL=https://openapi.koreainvestment.com:9443
 KIS_TR_ID_INVEST_OPINION=FHKST663300C0
 KIS_INVEST_OPINION_LOOKBACK_DAYS=180

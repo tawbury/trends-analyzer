@@ -11,6 +11,7 @@ from src.contracts.core import (
 )
 from src.contracts.payloads import QTSInputPayload
 from src.contracts.runtime import AnalyzeDailyResult, CorrelationContext
+from src.contracts.symbols import SymbolCatalog, SymbolRecord
 
 
 class NewsSourcePort(Protocol):
@@ -70,4 +71,17 @@ class IdempotencyRepository(Protocol):
         ...
 
     async def get(self, key: str) -> tuple[str, AnalyzeDailyResult] | None:
+        ...
+
+
+class SymbolCatalogSourcePort(Protocol):
+    async def fetch_symbols(self, as_of: datetime) -> list[SymbolRecord]:
+        ...
+
+
+class SymbolCatalogRepository(Protocol):
+    async def save(self, catalog: SymbolCatalog) -> None:
+        ...
+
+    async def get_latest(self) -> SymbolCatalog | None:
         ...

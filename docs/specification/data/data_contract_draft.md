@@ -26,6 +26,7 @@
 | Adapter payload contracts | `src/contracts/payloads.py` | QTSInputPayload, GenericInsightPayload, WorkflowTriggerPayload |
 | API DTO contracts | MVP 기본: `src/contracts/api.py`; 확장 시 `src/contracts/api_requests.py`, `src/contracts/api_responses.py` | transport 전용 API request/response, ErrorResponse, Pagination |
 | Runtime/job contracts | `src/contracts/runtime.py` | RuntimeMode, JobRequest, JobResult, CorrelationContext |
+| Symbol catalog contracts | `src/contracts/symbols.py` | SymbolRecord, SymbolCatalog |
 | Port contracts | `src/contracts/ports.py` | repository/source/dispatch protocol |
 
 API DTO 주의:
@@ -36,6 +37,33 @@ API DTO 주의:
 - API DTO가 많아지면 `api_requests.py`와 `api_responses.py`로 분리한다.
 
 ## 2. Core Signal Model
+
+### SymbolRecord / SymbolCatalog
+
+Symbol catalog는 뉴스 발견과 provider별 종목코드 기반 조회를 위한 upstream contract다. Core signal model은 아니지만 Core/ingestion 경계를 오염시키지 않기 위해 별도 `contracts.symbols`에 둔다.
+
+SymbolRecord:
+
+- `symbol`
+- `name`
+- `market`
+- `security_type`
+- `aliases`
+- `metadata`
+
+SymbolCatalog:
+
+- `id`
+- `as_of`
+- `source`
+- `records`
+- `generated_at`
+- `metadata`
+
+주의:
+
+- QTS/Observer universe의 전일종가 4000원 미만 제외 필터를 적용하지 않는다.
+- 가격, 거래정지, 관리종목 여부 같은 provider metadata는 보존할 수 있지만 catalog 포함/제외 정책으로 즉시 사용하지 않는다.
 
 ### RawNewsItem
 

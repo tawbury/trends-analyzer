@@ -26,7 +26,8 @@ src/
 │   ├── core.py
 │   ├── payloads.py
 │   ├── ports.py
-│   └── runtime.py
+│   ├── runtime.py
+│   └── symbols.py
 ├── adapters/
 │   ├── generic/
 │   ├── qts/
@@ -51,6 +52,7 @@ src/
 │   ├── schema/
 │   └── jsonl_store.py
 ├── ingestion/
+│   ├── catalog/
 │   ├── clients/
 │   ├── loaders/
 │   └── webhook.py
@@ -117,6 +119,7 @@ shared <- all layers
 - `api_requests.py`: API request DTO가 커질 때 선택적으로 분리
 - `api_responses.py`: API response DTO가 커질 때 선택적으로 분리
 - `runtime.py`: RuntimeMode, JobRequest, JobResult, CorrelationContext
+- `symbols.py`: SymbolRecord, SymbolCatalog
 - `ports.py`: repository, source, dispatch protocol
 
 규칙:
@@ -126,6 +129,21 @@ shared <- all layers
 - API는 `contracts.api`와 application use case에 의존한다.
 - API transport DTO는 Core signal contract나 Adapter payload contract로 재사용하지 않는다.
 - DB는 `contracts.ports`를 구현한다.
+
+### 4.0.2 `src/ingestion/catalog/`
+
+책임:
+
+- KIS official stock master MST ZIP 또는 임시 JSON artifact에서 symbol catalog 원천을 읽는다.
+- provider-specific 원천 포맷을 `SymbolRecord`로 정규화한다.
+- QTS/Observer universe의 전일종가 4000원 미만 제외 필터를 적용하지 않는다.
+- 전체 시장 catalog와 후속 news discovery 후보군 생성을 위한 입력을 제공한다.
+
+금지:
+
+- QTS 매매 유니버스 정책 구현
+- Core signal scoring 구현
+- API transport DTO import
 
 ### 4.0.1 `src/application/use_cases/`
 

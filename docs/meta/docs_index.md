@@ -72,6 +72,7 @@
 | `docs/appendix/development_architecture.md` | 개발용 아키텍처 참조 | 과거 개발용 통합 아키텍처. 현재 source of truth 아님 |
 | `docs/appendix/trend_intelligence_platform_draft_v_0.md` | 원본 초안 | 과거 기획 초안 참조. 현재 source of truth 아님 |
 | `docs/appendix/source_extension_notes.md` | 외부 소스 확장 참고 | KIS/Kiwoom 이후 provider 추가 절차와 후보. 현재 source of truth 아님 |
+| `docs/appendix/observer_universe_review.md` | Observer universe 검토 | Observer universe 분석과 symbol catalog 판단 근거. 현재 source of truth 아님 |
 
 ## 4. Source Of Truth 규칙
 

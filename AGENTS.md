@@ -27,9 +27,9 @@
 | 항목 | 내용 |
 |------|------|
 | 작업 브랜치 | `main` |
-| 목표 | 문서 close-out: 메타데이터 확인, API DTO MVP 구조 정리, 구현 traceability 문서 추가 |
-| 최근 완료 | 최종 정합성 패스: ingestion/usecase, runtime dispatch, API 문서 권위, API DTO 범위 정리 |
-| 완료 조건 | 구현 traceability 문서를 추가하고 docs_index/관련 권위 문서에 doc-to-code handoff 기준 반영 |
+| 목표 | Observer universe 코드를 검토해 trends-analyzer 전용 symbol catalog 계층 구현 |
+| 최근 완료 | Observer universe 분석, KIS MST 기반 symbol catalog refresh 구현, 4440건 실데이터 artifact 검증 |
+| 완료 조건 | 충족: 4000원 필터 없이 독립 symbol catalog refresh 경로 구현 및 테스트/실행 검증 완료 |
 
 ## Code Consistency Rules
 
@@ -48,6 +48,7 @@
 | Persistence | `src/db/` | PostgreSQL 우선. 초기 검증용 JSONL은 보조 저장소로만 사용 |
 | Workflow Payload | `src/adapters/workflow/` | neutral signal을 자동화/워크플로우 payload로 변환. n8n 인증, webhook, HTTP dispatch는 담당하지 않음 |
 | News Credibility | `src/core/credibility.py` | source tier, source_weight, evidence/corroboration, content quality, conflict penalty 기반 신뢰도 평가 |
+| Symbol Catalog | `src/ingestion/catalog/`, `src/contracts/symbols.py` | Observer/QTS universe의 가격 필터를 재사용하지 않고 전체 시장 심볼 카탈로그와 후보군 artifact를 관리 |
 
 ## Project Context
 

@@ -44,6 +44,10 @@ class Settings:
     source_symbols: list[str] | None = None
     source_timeout_seconds: float = 10
     source_partial_success: bool = True
+    symbol_catalog_source: str = "kis_master"
+    symbol_catalog_path: str = ""
+    symbol_catalog_markets: list[str] | None = None
+    symbol_catalog_url: str = ""
     kis_app_key: str = ""
     kis_app_secret: str = ""
     kis_base_url: str = "https://openapi.koreainvestment.com:9443"
@@ -71,6 +75,16 @@ class Settings:
             source_symbols=_csv_env("TRENDS_SOURCE_SYMBOLS", ["005930", "000660"]),
             source_timeout_seconds=float(os.getenv("TRENDS_SOURCE_TIMEOUT_SECONDS", "10")),
             source_partial_success=_bool_env("TRENDS_SOURCE_PARTIAL_SUCCESS", True),
+            symbol_catalog_source=os.getenv("TRENDS_SYMBOL_CATALOG_SOURCE", "kis_master"),
+            symbol_catalog_path=os.getenv("TRENDS_SYMBOL_CATALOG_PATH", ""),
+            symbol_catalog_markets=_csv_env(
+                "TRENDS_SYMBOL_CATALOG_MARKETS",
+                ["KOSPI", "KOSDAQ", "KONEX"],
+            ),
+            symbol_catalog_url=os.getenv(
+                "TRENDS_SYMBOL_CATALOG_URL",
+                "",
+            ),
             kis_app_key=os.getenv("KIS_APP_KEY", ""),
             kis_app_secret=os.getenv("KIS_APP_SECRET", ""),
             kis_base_url=os.getenv(

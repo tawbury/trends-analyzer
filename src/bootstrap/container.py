@@ -6,6 +6,7 @@ from itertools import count
 from uuid import uuid4
 
 from src.adapters.qts.adapter import QtsAdapter
+from src.application.use_cases.refresh_symbol_catalog import RefreshSymbolCatalogUseCase
 from src.application.use_cases.analyze_daily_trends import AnalyzeDailyTrendsUseCase
 from src.contracts.ports import (
     IdempotencyRepository,
@@ -22,6 +23,9 @@ from src.db.repositories.jsonl import (
     JsonlQtsPayloadRepository,
     JsonlSnapshotRepository,
 )
+from src.db.repositories.symbol_catalog_repository import JsonSymbolCatalogRepository
+from src.ingestion.catalog.json_artifact_loader import JsonArtifactSymbolCatalogSource
+from src.ingestion.catalog.kis_stock_code_source import KisStockCodeCatalogSource
 from src.ingestion.clients.http import JsonHttpClient
 from src.ingestion.clients.kis_client import KisClient
 from src.ingestion.clients.kiwoom_client import KiwoomClient
@@ -40,6 +44,7 @@ class Container:
     idempotency_repository: IdempotencyRepository
     news_source: NewsSourcePort
     analyze_daily_use_case: AnalyzeDailyTrendsUseCase
+    refresh_symbol_catalog_use_case: RefreshSymbolCatalogUseCase
 
 
 _job_sequence = count(start=1)
@@ -52,6 +57,10 @@ def build_container(settings: Settings | None = None) -> Container:
     qts_payload_repository = JsonlQtsPayloadRepository(data_dir / "qts_payloads.jsonl")
     idempotency_repository = JsonlIdempotencyRepository(data_dir / "idempotency.jsonl")
     news_source = build_news_source(resolved_settings)
+    symbol_catalog_repository = JsonSymbolCatalogRepository(
+        directory=data_dir / "symbol_catalog",
+    )
+    symbol_catalog_source = build_symbol_catalog_source(resolved_settings)
 
     use_case = AnalyzeDailyTrendsUseCase(
         news_source=news_source,
@@ -63,6 +72,10 @@ def build_container(settings: Settings | None = None) -> Container:
         qts_payload_repository=qts_payload_repository,
         rules_version=resolved_settings.rules_version,
     )
+    refresh_symbol_catalog_use_case = RefreshSymbolCatalogUseCase(
+        source=symbol_catalog_source,
+        repository=symbol_catalog_repository,
+    )
     return Container(
         settings=resolved_settings,
         snapshot_repository=snapshot_repository,
@@ -70,6 +83,7 @@ def build_container(settings: Settings | None = None) -> Container:
         idempotency_repository=idempotency_repository,
         news_source=news_source,
         analyze_daily_use_case=use_case,
+        refresh_symbol_catalog_use_case=refresh_symbol_catalog_use_case,
     )
 
 
@@ -125,6 +139,23 @@ def build_news_source(settings: Settings) -> NewsSourcePort:
         sources=sources,
         partial_success=settings.source_partial_success,
     )
+
+
+def build_symbol_catalog_source(settings: Settings):
+    source_name = settings.symbol_catalog_source.strip().lower()
+    if source_name == "json_artifact":
+        if not settings.symbol_catalog_path:
+            raise ValueError("TRENDS_SYMBOL_CATALOG_PATH is required for json_artifact source")
+        from pathlib import Path
+
+        return JsonArtifactSymbolCatalogSource(path=Path(settings.symbol_catalog_path))
+    if source_name in {"kis_master", "kis_csv"}:
+        return KisStockCodeCatalogSource(
+            url=settings.symbol_catalog_url,
+            allowed_markets=settings.symbol_catalog_markets or ["KOSPI", "KOSDAQ", "KONEX"],
+            timeout_seconds=settings.source_timeout_seconds,
+        )
+    raise ValueError(f"Unsupported symbol catalog source: {settings.symbol_catalog_source}")
 
 
 @lru_cache(maxsize=1)

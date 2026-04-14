@@ -79,7 +79,8 @@ src/db/repositories/
 ├── qts_payload_repository.py
 ├── generic_payload_repository.py
 ├── workflow_payload_repository.py
-└── dispatch_log_repository.py
+├── dispatch_log_repository.py
+└── symbol_catalog_repository.py
 ```
 
 규칙:
@@ -93,6 +94,7 @@ src/db/repositories/
 - batch job은 repository 또는 service 계층을 통해 저장한다.
 - write 작업은 가능한 한 idempotent key를 가진다.
 - 신뢰도 breakdown은 최종 `confidence_score`만 저장하지 말고 산정 근거를 재검토할 수 있게 별도 JSON 또는 정규화 컬럼으로 보존한다.
+- symbol catalog repository는 full market catalog를 저장하며 QTS 가격 필터가 적용된 universe artifact와 섞지 않는다.
 
 예시 method:
 
@@ -122,7 +124,10 @@ data/local/
 ├── normalized_news.jsonl
 ├── news_evaluations.jsonl
 ├── trend_snapshots.jsonl
-└── adapter_payloads.jsonl
+├── adapter_payloads.jsonl
+└── symbol_catalog/
+    ├── YYYYMMDD_symbol_catalog.json
+    └── latest_symbol_catalog.json
 ```
 
 규칙:
