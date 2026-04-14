@@ -64,6 +64,7 @@
 - 데이터/저장소 충돌: `data_contract_draft.md`, `docs/spec/data_model_spec.md`, `docs/spec/persistence_spec.md` 우선
 - 런타임/스케줄 충돌: `runtime_scheduling_policy.md` 우선
 - 환경 설정 충돌: `environment_config.md` 우선
+- 문서에서 코드 위치로의 추적성 충돌: `implementation_traceability.md` 우선
 
 충돌을 발견하면 참조 문서만 고치지 말고 권위 문서를 먼저 수정한다.
 
@@ -73,4 +74,5 @@
 - 새 endpoint는 API 문서와 spec 문서를 함께 수정한다.
 - 새 source module은 module design과 source module spec을 함께 수정한다.
 - 새 환경 변수는 `environment_config.md`를 먼저 갱신한다.
+- 새 source file/directory가 문서 개념을 구현하면 `implementation_traceability.md` 매핑을 확인한다.
 - 문서의 권위 범위를 벗어난 내용을 추가해야 한다면 관련 권위 문서 링크를 남긴다.

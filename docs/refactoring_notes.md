@@ -172,6 +172,18 @@ v0.3 이후에도 구현자가 읽을 때 Ingestion이 Application보다 위의 
 - `contracts/api.py`는 transport DTO 전용이며, 규모가 커지면 `api_requests.py`와 `api_responses.py`로 분리한다고 문서화했다.
 - 핵심 권위 문서에 `document_metadata_standard.md` 형식의 metadata header를 추가했다.
 
+### 2.18 구현 close-out에서 doc-to-code 추적성을 추가함
+
+문서가 구현 가능한 상태가 되었지만, 구현 에이전트가 어떤 문서 섹션을 어떤 source file로 옮겨야 하는지 한 번 더 명시할 필요가 있었다.
+
+보정:
+
+- `implementation_traceability.md`를 추가했다.
+- architecture concept, module/layer, contract, use case, API group, runtime concern을 권장 source directory/file로 매핑했다.
+- 로컬 WSL2 검증용 MVP 구현 slice를 정의했다.
+- 새 contract, UseCase, endpoint, runtime mode, env var가 생길 때 함께 갱신할 문서 규칙을 추가했다.
+- API transport DTO는 MVP에서 `src/contracts/api.py`로 시작하고, 규모가 커질 때만 `api_requests.py`와 `api_responses.py`로 분리하도록 권장안을 명확히 했다.
+
 ## 3. 이번 개정에서 변경한 구조
 
 신규/개정 문서:
@@ -190,6 +202,7 @@ v0.3 이후에도 구현자가 읽을 때 Ingestion이 Application보다 위의 
 - `docs_index.md`
 - `environment_config.md`
 - `document_metadata_standard.md`
+- `implementation_traceability.md`
 - `docs/spec/*`
 
 ## 4. 아직 남은 구현 의사결정

@@ -6,7 +6,7 @@
 - 상태: Draft v0.4
 - 권위 범위: 문서 역할, source-of-truth 관계, 변경 규칙
 - 상위 문서: 없음
-- 관련 문서: `document_metadata_standard.md`, `refactoring_notes.md`, `open_decisions.md`
+- 관련 문서: `document_metadata_standard.md`, `implementation_traceability.md`, `refactoring_notes.md`, `open_decisions.md`
 - 최종 수정일: 2026-04-15
 
 ## 1. 목적
@@ -27,6 +27,7 @@
 | `environment_config.md` | 환경 및 런타임 설정 | local/laptop/OCI 설정 차이, env var group, feature flag, secret/config 경계 |
 | `observability_ops.md` | 운영/관측성 | logs, job ids, correlation ids, dispatch results, health/readiness |
 | `document_metadata_standard.md` | 문서 관리 기준 | 문서 header, 상태/version, authority scope, parent/related document 표기 |
+| `implementation_traceability.md` | 구현 추적성 | 문서 개념에서 source directory/file로의 매핑, MVP 구현 slice, doc-to-code update rule |
 | `open_decisions.md` | 미결 의사결정 | 구현 전 확정해야 할 결정사항 |
 | `refactoring_notes.md` | 설계 보정 기록 | 이전 문서의 모호점과 변경 내역 |
 | `example_code_appendix.md` | 예시 코드 | 구현 방향을 설명하는 짧은 Python 예시 |
@@ -46,6 +47,7 @@
 - 환경 변수, feature flag, secret/config 경계는 `environment_config.md`가 우선한다.
 - 운영/관측성은 `observability_ops.md`가 우선한다.
 - 문서 header와 문서 drift 방지 기준은 `document_metadata_standard.md`가 우선한다.
+- 문서 개념에서 코드 위치로의 매핑과 MVP 구현 slice는 `implementation_traceability.md`가 우선한다.
 
 ## 4. 변경 규칙
 
@@ -55,11 +57,12 @@
 - 새 데이터 필드가 생기면 `data_contract_draft.md`, `docs/spec/data_model_spec.md`, `docs/spec/persistence_spec.md`를 함께 갱신한다.
 - 배포 방식이 바뀌면 `deployment_topology.md`와 `runtime_scheduling_policy.md`를 함께 갱신한다.
 - 새 환경 변수가 생기면 `environment_config.md`를 먼저 갱신하고 관련 runtime/API/ops 문서를 맞춘다.
+- 새 UseCase, route, contract, runtime concern이 생기면 `implementation_traceability.md`의 매핑도 함께 확인한다.
 - 신규 문서 또는 큰 폭으로 수정되는 문서는 `document_metadata_standard.md`의 header 기준을 따른다.
 
 ## 5. 문서 메타데이터 적용 기준
 
-v0.3 이후 새 문서에는 다음 메타데이터를 제목 직후에 둔다.
+v0.4 이후 새 문서에는 다음 메타데이터를 제목 직후에 둔다.
 
 - 문서 유형
 - 상태

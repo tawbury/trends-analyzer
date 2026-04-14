@@ -33,15 +33,16 @@
 
 - `src/contracts/core.py`
 - `src/contracts/payloads.py`
-- `src/contracts/api.py` 또는 `src/contracts/api_requests.py` / `src/contracts/api_responses.py`
+- `src/contracts/api.py`를 MVP 기본안으로 사용
+- `src/contracts/api_requests.py` / `src/contracts/api_responses.py`는 API DTO가 커질 때 분리
 - `src/contracts/runtime.py`
 - `src/contracts/ports.py`
 
 주의:
 
 - API transport DTO는 Core signal contract나 Adapter payload contract로 재사용하지 않는다.
-- `src/contracts/api.py`를 사용할 경우 request/response transport schema만 둔다.
-- API DTO 규모가 커지면 `src/contracts/api_requests.py`와 `src/contracts/api_responses.py`로 분리한다.
+- MVP에서는 `src/contracts/api.py`에 request/response transport schema만 둔다.
+- API DTO 규모가 커지거나 route group별 DTO가 늘어나면 `src/contracts/api_requests.py`와 `src/contracts/api_responses.py`로 분리한다.
 - Adapter는 API DTO가 아니라 payload contract에 의존한다.
 - Core는 API schema를 import하지 않는다.
 - DB repository는 repository contract를 구현한다.

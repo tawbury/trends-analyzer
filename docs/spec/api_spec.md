@@ -28,7 +28,8 @@ API 계층의 목적은 다음과 같다.
 - API route는 Application UseCase를 호출하고 Core/Adapter/Repository를 직접 조합하지 않는다.
 - write/heavy endpoint는 `src/api/dependencies.py`의 장중 보호 dependency를 통과해야 한다.
 - response는 Core 내부 모델을 그대로 노출하지 않고 API schema로 변환한다.
-- API transport schema는 `src/contracts/api.py` 또는 규모 증가 시 `src/contracts/api_requests.py`, `src/contracts/api_responses.py`에 둔다.
+- API transport schema는 MVP에서 `src/contracts/api.py`에 둔다.
+- API DTO가 많아지면 `src/contracts/api_requests.py`, `src/contracts/api_responses.py`로 분리한다.
 - API transport schema는 Core signal contract나 Adapter payload contract로 import되어서는 안 된다.
 - timestamp는 ISO 8601 문자열을 사용하고 timezone을 명시한다.
 - pagination이 필요한 조회 API는 `limit`, `offset` 또는 cursor 방식을 명시적으로 선택한다.

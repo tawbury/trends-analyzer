@@ -27,9 +27,9 @@
 | 항목 | 내용 |
 |------|------|
 | 작업 브랜치 | `main` |
-| 목표 | 최종 문서 정합성 패스: ingestion/usecase, dispatch 책임, API 문서 권위, API DTO 범위, 메타데이터 header 정리 |
-| 최근 완료 | v0.3 구현 경계 문서 하드닝 및 환경/문서 메타데이터 기준 추가 |
-| 완료 조건 | 핵심 권위 문서에 metadata header를 추가하고 ingestion/usecase, runtime dispatch, API draft/spec, contracts/api.py 범위의 모호성 제거 |
+| 목표 | 문서 close-out: 메타데이터 확인, API DTO MVP 구조 정리, 구현 traceability 문서 추가 |
+| 최근 완료 | 최종 정합성 패스: ingestion/usecase, runtime dispatch, API 문서 권위, API DTO 범위 정리 |
+| 완료 조건 | 구현 traceability 문서를 추가하고 docs_index/관련 권위 문서에 doc-to-code handoff 기준 반영 |
 
 ## Code Consistency Rules
 
@@ -51,8 +51,8 @@
 
 ## Project Context
 
-- 이 프로젝트는 QTS 연계형 트렌드 인텔리전스 플랫폼이다.
-- 목표는 뉴스 기반 트렌드 분석, QTS 의사결정 보조, n8n/API 연동용 범용 인텔리전스 엔진 구축이다.
+- 이 프로젝트는 독립 Trend Intelligence Platform이며, QTS는 Adapter를 통해 연동되는 소비자 중 하나다.
+- 목표는 뉴스 기반 트렌드 분석, QTS 의사결정 보조 payload, n8n/API 연동용 범용 인텔리전스 엔진 구축이다.
 - 대상 환경은 Windows 11 + WSL2 개발, OCI ARM 운영, n8n 연동이다.
 - 초기 운영 위치는 QTS/Observer와 동일한 OCI 서버 내 3번째 앱으로 본다.
 - 실시간 초저지연 매매 엔진이 아니라 뉴스 수집, 필터링, 스코어링, 집계 중심 시스템이다.

@@ -20,7 +20,7 @@ src/
 ├── application/
 │   └── use_cases/
 ├── contracts/
-│   ├── api.py
+│   ├── api.py                  # MVP default for API transport DTOs
 │   ├── api_requests.py        # optional when API DTO grows
 │   ├── api_responses.py       # optional when API DTO grows
 │   ├── core.py
@@ -113,7 +113,7 @@ shared <- all layers
 
 - `core.py`: RawNewsItem, NormalizedNewsItem, NewsEvaluation, MarketSignal, ThemeSignal, StockSignal, TrendSnapshot
 - `payloads.py`: QTSInputPayload, GenericInsightPayload, WorkflowTriggerPayload
-- `api.py`: transport 전용 API request/response DTO, ErrorResponse, pagination DTO
+- `api.py`: MVP 기본 API transport request/response DTO, ErrorResponse, pagination DTO
 - `api_requests.py`: API request DTO가 커질 때 선택적으로 분리
 - `api_responses.py`: API response DTO가 커질 때 선택적으로 분리
 - `runtime.py`: RuntimeMode, JobRequest, JobResult, CorrelationContext

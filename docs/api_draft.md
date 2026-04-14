@@ -23,7 +23,8 @@
 - QTS, Generic, Workflow output은 각각 별도 endpoint group으로 제공한다.
 - n8n은 inbound와 downstream consumer 양쪽 흐름을 모두 가진다.
 - API route는 Core/Adapter/Repository를 직접 조합하지 않고 Application UseCase만 호출한다.
-- API transport DTO는 `src/contracts/api.py` 또는 규모 증가 시 `src/contracts/api_requests.py`, `src/contracts/api_responses.py`에 둔다.
+- API transport DTO는 MVP에서 `src/contracts/api.py`에 둔다.
+- API DTO가 많아지면 `src/contracts/api_requests.py`, `src/contracts/api_responses.py`로 분리한다.
 - API transport DTO는 Core signal contract나 Adapter payload contract로 재사용하지 않는다.
 
 ## 2. 공통 API 계약
