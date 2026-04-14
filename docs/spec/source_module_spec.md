@@ -54,6 +54,8 @@ src/
 │   └── webhook.py
 ├── integration/
 │   └── n8n/
+├── runtime/
+│   └── dispatch/
 ├── scheduler/
 ├── shared/
 │   ├── clock.py
@@ -73,11 +75,14 @@ application -> core
 application -> adapters
 application -> contracts.ports
 application -> integration/n8n ports
+application -> runtime/dispatch ports
 adapters -> contracts
 core -> contracts
 core -> shared
 integration/n8n -> contracts.payloads
 integration/n8n -> contracts.ports
+runtime/dispatch -> contracts.runtime
+runtime/dispatch -> contracts.ports
 db -> contracts.ports
 shared <- all layers
 ```
@@ -95,6 +100,8 @@ shared <- all layers
 - `db -> api`
 - `ingestion -> adapters`
 - `adapters -> api`
+- `adapters/workflow -> integration/n8n`
+- `integration/n8n -> adapters/workflow`
 
 ## 4. 모듈 책임
 
@@ -192,7 +199,7 @@ shared <- all layers
 
 책임:
 
-- n8n용 `WorkflowTriggerPayload` 생성
+- 자동화/워크플로우용 `WorkflowTriggerPayload` 생성
 - `trigger_type`, `priority`, `recommended_actions`, `routing_conditions`, `downstream_payload` 구성
 
 금지:
@@ -214,6 +221,22 @@ shared <- all layers
 - WorkflowTriggerPayload mapping 구현
 - Core signal 계산
 - Generic briefing 생성
+
+### 4.4.2 `src/runtime/dispatch/`
+
+책임:
+
+- dispatch 실행 정책 적용
+- idempotency key 확인
+- retry 가능 여부 판단
+- dispatch job 상태 기록
+- `integration/n8n` gateway 호출 조율
+
+금지:
+
+- WorkflowTriggerPayload mapping 구현
+- n8n webhook signature 검증 구현
+- Core signal 계산
 
 ### 4.5 `src/api/`
 
@@ -298,6 +321,7 @@ shared <- all layers
 - 새 알고리즘은 `src/core/`에 두고 adapter나 API에 중복 구현하지 않는다.
 - 새 소비자 포맷은 `src/adapters/{consumer}/`에 둔다.
 - 새 n8n gateway 로직은 `src/integration/n8n/`에 둔다.
+- 새 dispatch 실행 정책은 `src/runtime/dispatch/`에 둔다.
 - 새 API route는 `src/api/routes/{group}.py`에 둔다.
 - 새 batch job은 `src/batch/jobs/{job_name}.py`에 둔다.
 - 새 scheduler 설정은 `src/scheduler/`에 둔다.

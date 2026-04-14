@@ -78,7 +78,8 @@ src/db/repositories/
 ├── snapshot_repository.py
 ├── qts_payload_repository.py
 ├── generic_payload_repository.py
-└── workflow_repository.py
+├── workflow_payload_repository.py
+└── dispatch_log_repository.py
 ```
 
 규칙:

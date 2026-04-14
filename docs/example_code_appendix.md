@@ -301,6 +301,105 @@ def build_job_id(date_key: str, job_type: str, sequence: int) -> str:
     return f"job_{date_key}_{job_type}_{sequence:03d}"
 ```
 
+## 7.2 Idempotency Key 처리 예시
+
+Idempotency는 API route가 아니라 UseCase 또는 dispatch runtime 경계에서 확인한다.
+
+```python
+from dataclasses import dataclass
+from typing import Protocol
+
+
+@dataclass(frozen=True)
+class IdempotencyRecord:
+    key: str
+    request_hash: str
+    result_id: str
+
+
+class IdempotencyStore(Protocol):
+    async def get(self, key: str) -> IdempotencyRecord | None:
+        ...
+
+    async def save(self, record: IdempotencyRecord) -> None:
+        ...
+
+
+class IdempotencyConflict(Exception):
+    pass
+
+
+async def ensure_idempotent(
+    store: IdempotencyStore,
+    key: str,
+    request_hash: str,
+) -> IdempotencyRecord | None:
+    existing = await store.get(key)
+    if existing is None:
+        return None
+    if existing.request_hash != request_hash:
+        raise IdempotencyConflict("same key was used with a different request body")
+    return existing
+```
+
+## 7.3 Webhook Signature 검증 예시
+
+Webhook 검증은 `src/integration/n8n/` 경계에서 수행하고, 검증 실패 시 Core ingestion을 호출하지 않는다.
+
+```python
+import hmac
+from hashlib import sha256
+
+
+def verify_hmac_signature(raw_body: bytes, signature: str, secret: str) -> bool:
+    expected = hmac.new(secret.encode("utf-8"), raw_body, sha256).hexdigest()
+    return hmac.compare_digest(expected, signature)
+```
+
+## 7.4 Job / Correlation ID 전파 예시
+
+UseCase는 neutral snapshot을 만들고 Adapter payload를 생성한 뒤 dispatch runtime에 correlation context를 전달한다.
+
+```python
+@dataclass(frozen=True)
+class DispatchCommand:
+    snapshot_id: str
+    idempotency_key: str
+    correlation: CorrelationContext
+
+
+class DispatchWorkflowPayloadUseCase:
+    def __init__(self, snapshots, workflow_adapter, dispatch_runtime, idempotency_store):
+        self.snapshots = snapshots
+        self.workflow_adapter = workflow_adapter
+        self.dispatch_runtime = dispatch_runtime
+        self.idempotency_store = idempotency_store
+
+    async def execute(self, command: DispatchCommand) -> str:
+        existing = await ensure_idempotent(
+            self.idempotency_store,
+            key=command.idempotency_key,
+            request_hash=command.snapshot_id,
+        )
+        if existing is not None:
+            return existing.result_id
+
+        snapshot = await self.snapshots.get(command.snapshot_id)
+        payload = self.workflow_adapter.convert(snapshot)
+        dispatch_id = await self.dispatch_runtime.dispatch(
+            payload=payload,
+            correlation=command.correlation,
+        )
+        await self.idempotency_store.save(
+            IdempotencyRecord(
+                key=command.idempotency_key,
+                request_hash=command.snapshot_id,
+                result_id=dispatch_id,
+            )
+        )
+        return dispatch_id
+```
+
 ## 8. Runtime Mode Enum 예시
 
 ```python

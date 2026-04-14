@@ -6,6 +6,18 @@
 - QTS payload, Generic payload, Workflow payload는 Adapter 산출물이다.
 - 분석 output과 consumer-specific payload를 저장소와 코드에서 분리한다.
 - confidence score는 설명 가능한 breakdown을 가져야 한다.
+- Signal API DTO는 neutral signal 용어만 사용한다.
+- QTS payload DTO에서만 `market_bias`, `risk_overrides`, `universe_adjustments`를 사용한다.
+
+## 1.1 계약 분류
+
+| 분류 | 권장 위치 | 설명 |
+|------|-----------|------|
+| Core signal contracts | `src/contracts/core.py` | RawNewsItem, NewsEvaluation, MarketSignal, ThemeSignal, StockSignal, TrendSnapshot |
+| Adapter payload contracts | `src/contracts/payloads.py` | QTSInputPayload, GenericInsightPayload, WorkflowTriggerPayload |
+| API DTO contracts | `src/contracts/api.py` | API request/response, ErrorResponse, Pagination |
+| Runtime/job contracts | `src/contracts/runtime.py` | RuntimeMode, JobRequest, JobResult, CorrelationContext |
+| Port contracts | `src/contracts/ports.py` | repository/source/dispatch protocol |
 
 ## 2. Core Signal Model
 

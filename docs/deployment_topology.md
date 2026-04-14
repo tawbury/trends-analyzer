@@ -96,3 +96,15 @@ python -m src.scheduler.main
 - 장중 heavy job을 비활성화한다.
 - logs/job status를 남긴다.
 - QTS/Observer와 batch window가 충돌하지 않게 한다.
+
+## 8. 환경 설정 연결
+
+환경별 runtime flag와 secret/config 경계는 `environment_config.md`를 따른다.
+
+배포 토폴로지가 바뀌어도 다음 설정 경계는 유지한다.
+
+- `RUNTIME_ROLE`로 api/worker/scheduler 실행 역할을 구분한다.
+- `RUNTIME_MODE`로 daily/incremental/rebuild/api_readonly/workflow_dispatch 작업 모드를 구분한다.
+- `SCHEDULER_ENABLED`와 `SCHEDULER_BACKEND`로 scheduler 배포 방식을 통제한다.
+- `MARKET_HOURS_GUARD_ENABLED`는 OCI와 예비 노트북 테스트 노드에서 기본 활성화한다.
+- n8n secret, outbound webhook URL, idempotency TTL은 코드가 아니라 환경 설정으로 주입한다.

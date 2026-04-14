@@ -66,3 +66,25 @@
 - 구조화 로그 포맷을 JSON으로 고정할지 결정해야 한다.
 - job status 저장소를 PostgreSQL에 둘지 JSONL 보조 저장소에도 남길지 결정해야 한다.
 - readiness endpoint를 MVP에 포함할지 결정해야 한다.
+
+## 11. Environment / Config
+
+- 설정 로더 위치를 확정해야 한다.
+  - 후보: `src/shared/config.py`, `src/bootstrap/config.py`
+- 환경별 설정 파일 네이밍을 확정해야 한다.
+  - 후보: `.env.local`, `.env.laptop`, `.env.oci`
+- `API_AUTH_MODE`의 운영 기본값을 확정해야 한다.
+  - 후보: `bearer_token`, `reverse_proxy_auth`
+- `N8N_INBOUND_AUTH_MODE`의 운영 기본값을 확정해야 한다.
+  - 후보: `shared_secret`, `hmac`
+- `SOURCE_TIER_CONFIG_PATH`의 초기 위치와 배포 방식을 확정해야 한다.
+  - 후보: `config/source_tiers.yaml`, DB table, hybrid
+- idempotency key 저장소를 확정해야 한다.
+  - 후보: PostgreSQL table, Redis-like 외부 저장소, JSONL 임시 저장소
+- scheduler flag와 runtime role 설정을 process manager에서 주입할지, `.env.oci`에서 관리할지 결정해야 한다.
+
+## 12. Documentation Governance
+
+- 기존 문서 전체에 `document_metadata_standard.md` header를 일괄 적용할지, 다음 큰 수정 시점부터 점진 적용할지 결정해야 한다.
+- 문서 version을 파일별로 관리할지 릴리즈 단위로 관리할지 결정해야 한다.
+- 문서 변경이 구현 변경과 같은 PR/commit에 들어가야 하는지 분리해야 하는지 기준을 정해야 한다.

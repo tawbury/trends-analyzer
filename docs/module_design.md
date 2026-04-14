@@ -170,7 +170,27 @@
 - Workflow Adapter payload mapping과 n8n gateway 실행 로직을 섞지 않는다.
 - gateway는 `WorkflowTriggerPayload` 계약과 dispatch port에 의존한다.
 
-## 9. API Service
+## 9. Runtime Dispatch
+
+책임:
+
+- dispatch 실행 정책 적용
+- idempotency key 확인
+- retry 가능 여부 확인
+- dispatch job status 기록
+- `N8nDispatchGateway` 호출
+
+권장 위치:
+
+- `src/runtime/dispatch/`
+
+주의:
+
+- Workflow Adapter는 payload를 만든다.
+- n8n Integration Gateway는 webhook/HTTP 경계를 처리한다.
+- Runtime Dispatch는 언제/어떻게 dispatch를 실행할지 결정한다.
+
+## 10. API Service
 
 책임:
 
@@ -191,7 +211,7 @@
 - `src/api/routes/workflow.py`
 - `src/api/routes/ops.py`
 
-## 10. Batch Worker
+## 11. Batch Worker
 
 책임:
 
@@ -201,7 +221,7 @@
 - 실패 범위와 재시도 가능성 기록
 - Core/Adapter 직접 orchestration 금지
 
-## 11. Scheduler
+## 12. Scheduler
 
 책임:
 
@@ -210,7 +230,7 @@
 - job overlap 방지
 - Batch Worker 또는 UseCase trigger만 호출
 
-## 12. Repositories / Ports
+## 13. Repositories / Ports
 
 권장 port:
 

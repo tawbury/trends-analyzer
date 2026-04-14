@@ -41,6 +41,12 @@ write/heavy endpoint는 중복 실행을 막기 위해 idempotency key를 지원
 - `POST /api/v1/workflow/dispatch`
 - `POST /api/v1/jobs/retry`
 
+정책:
+
+- 같은 `Idempotency-Key`와 같은 request body는 같은 job 또는 dispatch 결과를 반환한다.
+- 같은 key로 다른 body가 들어오면 `IDEMPOTENCY_CONFLICT`를 반환한다.
+- key 보관 기간은 운영 정책으로 확정하되 MVP에서는 24시간 이상을 권장한다.
+
 ### 2.3 Error Response Model
 
 모든 에러는 같은 구조를 사용한다.
@@ -97,6 +103,8 @@ write/heavy endpoint는 중복 실행을 막기 위해 idempotency key를 지원
 - `offset` 또는 cursor 중 하나를 endpoint별로 명시한다.
 - 시간 필터는 `from`, `to`, `as_of`를 ISO 8601로 받는다.
 - symbol/theme/source 필터는 문자열 배열을 허용할 수 있다.
+- 정렬은 `sort`와 `order`를 사용한다.
+- 기본 정렬은 최신 생성 시각 내림차순이다.
 
 ### 2.6 Webhook Verification
 
@@ -110,6 +118,15 @@ n8n webhook은 다음 정보를 검증/기록한다.
 - upstream provenance
 
 검증 실패 시 `401` 또는 `403`을 반환하고 `webhook_ingest_logs`에 실패 사유를 남긴다.
+
+### 2.7 Signal DTO와 Payload DTO 분리
+
+Signal API는 neutral DTO만 반환한다.
+
+- 허용: `bias_hint`, `impact_score`, `confidence_score`, `driver_themes`
+- 금지: `market_bias`, `risk_overrides`, `universe_adjustments`
+
+`market_bias`는 QTS Adapter가 `bias_hint`를 QTS 문맥으로 변환한 결과이며, Signal API에 노출하지 않는다.
 
 ## 3. Endpoint Groups
 

@@ -22,6 +22,9 @@ News Sources / n8n Inbound
 Ingestion Layer
         |
         v
+Contracts Layer
+        |
+        v
 Application / UseCase Layer
         |
         v
@@ -84,7 +87,23 @@ UseCase가 필요한 이유:
 - scheduler가 job 실행 시점만 결정하고 업무 흐름은 use case에 위임한다.
 - Core와 Adapter가 서로를 직접 호출하지 않고 application 계층이 조율한다.
 
-### 3.3 Trend Core
+### 3.3 Contracts Layer
+
+역할:
+
+- Core signal contract를 정의한다.
+- Adapter payload contract를 정의한다.
+- API DTO contract를 정의한다.
+- Runtime/job/correlation contract를 정의한다.
+- Repository/source/dispatch port contract를 정의한다.
+
+Contracts가 필요한 이유:
+
+- Core, Adapter, API, DB가 서로의 구현에 의존하지 않게 한다.
+- Signal API가 QTS payload 용어를 실수로 노출하지 않게 한다.
+- n8n gateway가 Workflow Adapter 구현이 아니라 payload contract에 의존하게 한다.
+
+### 3.4 Trend Core
 
 역할:
 
@@ -102,7 +121,7 @@ Core boundary:
 - Core는 브리핑 문장을 최종 포맷으로 생성하지 않는다.
 - Core output은 소비자 독립적인 neutral signal model이어야 한다.
 
-### 3.4 Adapter Layer
+### 3.5 Adapter Layer
 
 역할:
 
@@ -120,7 +139,7 @@ Adapter boundary:
 - Adapter는 Core 알고리즘을 재구현하지 않는다.
 - Adapter는 자신의 consumer payload만 책임진다.
 
-### 3.5 API Layer
+### 3.6 API Layer
 
 역할:
 
@@ -138,7 +157,7 @@ API-first가 필요한 이유:
 - 로컬 검증과 OCI 운영 검증이 같은 계약을 사용한다.
 - 추후 별도 서버 분리 시 외부 계약을 유지할 수 있다.
 
-### 3.6 Integration / n8n Layer
+### 3.7 Integration / n8n Layer
 
 역할:
 
@@ -151,9 +170,23 @@ API-first가 필요한 이유:
 
 - Workflow Adapter는 payload mapping만 수행한다.
 - `integration/n8n`은 HTTP/webhook/dispatch와 verification을 수행한다.
-- runtime dispatch 정책은 Batch/UseCase 또는 integration runtime에서 수행한다.
+- runtime dispatch 정책은 `runtime/dispatch`와 UseCase에서 수행한다.
 
-### 3.7 Runtime Layer
+### 3.8 Runtime / Dispatch Layer
+
+역할:
+
+- dispatch idempotency 확인
+- retry/rebuild 금지 시간 확인
+- dispatch execution job 상태 기록
+- n8n gateway 호출을 실행 단위로 감싼다.
+
+주의:
+
+- Workflow Adapter payload mapping과 dispatch 실행 정책을 분리한다.
+- n8n webhook verification은 `integration/n8n` 책임으로 둔다.
+
+### 3.9 Runtime Layer
 
 역할:
 
@@ -184,6 +217,7 @@ src/ingestion/  -> ingestion runtime
 src/adapters/   -> reusable mapping layer
 src/contracts/  -> cross-layer contracts
 src/integration/-> external system gateway
+src/runtime/    -> dispatch/runtime policies
 src/core/       -> pure analysis core
 ```
 

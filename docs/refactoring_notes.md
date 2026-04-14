@@ -108,6 +108,56 @@ Workflow Adapter, n8n gateway, dispatch runtime이 모두 workflow로 뭉쳐 보
 - `deployment_topology.md`를 추가했다.
 - `docs_index.md`로 문서 권위 기준을 정리했다.
 
+### 2.12 v0.3에서도 실제 소스 구조의 UseCase/Contracts 고정이 더 필요했음
+
+v0.2 문서는 UseCase와 contracts를 개념적으로 설명했지만, 구현 에이전트가 실제 `src/` 구조를 만들 때 API나 Batch가 Core/Adapter를 직접 조합할 여지가 남아 있었다.
+
+보정:
+
+- `src/application/use_cases/`를 공식 orchestration boundary로 다시 명시했다.
+- `src/contracts/`를 first-class 계층으로 고정했다.
+- `src/contracts/core.py`, `payloads.py`, `api.py`, `runtime.py`, `ports.py` 분리를 문서화했다.
+- API route, Batch runner, Scheduler는 UseCase를 호출하고 Core/Adapter/Repository 직접 조합을 하지 않도록 dependency direction을 보강했다.
+
+### 2.13 Workflow 명칭이 여전히 과부하될 수 있었음
+
+Workflow Adapter, n8n gateway, dispatch runtime이 모두 workflow라는 이름으로 묶이면 구현 위치가 흐려질 수 있었다.
+
+보정:
+
+- `src/adapters/workflow/`: neutral signal을 workflow payload로 변환하는 mapping 책임
+- `src/integration/n8n/`: inbound webhook, signature verification, outbound HTTP gateway 책임
+- `src/runtime/dispatch/`: dispatch 실행 정책, idempotency, retry, dispatch status 책임
+- generic `src/workflow/` 같은 모호한 구조를 만들지 않도록 source module spec을 보정했다.
+
+### 2.14 Neutral signal DTO와 Adapter payload DTO가 섞일 위험이 있었음
+
+Signal API 예시가 QTS adapter 용어와 섞이면 Core가 QTS 정책을 아는 구조로 구현될 수 있다.
+
+보정:
+
+- Signal API는 neutral DTO만 반환한다고 명시했다.
+- Core 방향성 힌트는 `bias_hint`로 표현한다.
+- `market_bias`, `risk_overrides`, `universe_adjustments`는 QTS Adapter payload에서만 사용한다고 정리했다.
+
+### 2.15 API 공통 계약과 환경 설정 기준이 구현 안전 수준까지 부족했음
+
+API 인증, idempotency, webhook signature, error model, pagination/sort 규칙과 환경별 runtime flag가 더 구체화되어야 했다.
+
+보정:
+
+- `api_draft.md`와 `docs/spec/api_spec.md`에 auth mode, idempotency conflict, standard error response, async job response, pagination/filter/sort 기준을 보강했다.
+- `environment_config.md`를 추가해 local/laptop/OCI 설정 차이, scheduler flag, market-hours guard flag, n8n secret/auth, source tier config path, runtime mode를 문서화했다.
+
+### 2.16 문서 header 기준이 없어 drift 방지가 약했음
+
+문서 인덱스는 있었지만 문서별 권위 범위, 상위 문서, 상태/version을 문서 본문에 표시하는 기준이 없었다.
+
+보정:
+
+- `document_metadata_standard.md`를 추가했다.
+- 신규 문서와 크게 수정되는 문서에는 문서 유형, 상태, 권위 범위, 상위 문서, 관련 문서, 최종 수정일을 표시하도록 정리했다.
+
 ## 3. 이번 개정에서 변경한 구조
 
 신규/개정 문서:
@@ -124,6 +174,8 @@ Workflow Adapter, n8n gateway, dispatch runtime이 모두 workflow로 뭉쳐 보
 - `observability_ops.md`
 - `deployment_topology.md`
 - `docs_index.md`
+- `environment_config.md`
+- `document_metadata_standard.md`
 - `docs/spec/*`
 
 ## 4. 아직 남은 구현 의사결정

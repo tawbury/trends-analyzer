@@ -80,6 +80,8 @@ Persistence
 
 ```text
 src/
+├── application/
+│   └── use_cases/
 ├── adapters/
 │   ├── generic/
 │   ├── qts/
@@ -92,6 +94,12 @@ src/
 │   ├── jobs/
 │   └── runner.py
 ├── config/
+├── contracts/
+│   ├── api.py
+│   ├── core.py
+│   ├── payloads.py
+│   ├── ports.py
+│   └── runtime.py
 ├── core/
 │   ├── aggregate.py
 │   ├── deduplicate.py
@@ -107,20 +115,28 @@ src/
 │   ├── clients/
 │   ├── loaders/
 │   └── webhook.py
+├── integration/
+│   └── n8n/
+├── runtime/
+│   └── dispatch/
 ├── scheduler/
 ├── shared/
 │   ├── clock.py
 │   ├── market_hours.py
 │   └── logging.py
-└── workflow/
 ```
 
 디렉토리 원칙은 다음과 같다.
 
+- `src/application/use_cases/`는 API, Batch, Scheduler가 호출하는 공식 orchestration boundary다.
+- `src/contracts/`는 Core signal, Adapter payload, API DTO, runtime/job, repository/port 계약을 분리한다.
 - `src/core/`는 뉴스 해석과 signal 산출만 담당한다.
 - `src/adapters/`는 Core 산출물을 소비자별 payload로 변환한다.
+- `src/adapters/workflow/`는 workflow payload mapping만 담당한다.
+- `src/integration/n8n/`는 n8n inbound webhook, signature verification, outbound HTTP gateway를 담당한다.
+- `src/runtime/dispatch/`는 workflow dispatch 실행, idempotency, retry, dispatch status를 담당한다.
 - `src/api/`는 FastAPI 라우팅과 요청/응답 경계만 담당한다.
-- `src/batch/`와 `src/scheduler/`는 장외 실행 정책과 job orchestration을 담당한다.
+- `src/batch/`와 `src/scheduler/`는 Core/Adapter를 직접 조합하지 않고 UseCase 실행과 장외 실행 정책을 담당한다.
 - `src/db/`는 PostgreSQL repository와 로컬 검증용 JSONL 저장소를 분리한다.
 - `src/shared/market_hours.py`에는 KST 장중 보호 가드를 둔다.
 

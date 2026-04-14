@@ -27,9 +27,9 @@
 | 항목 | 내용 |
 |------|------|
 | 작업 브랜치 | `main` |
-| 목표 | v0.2 문서 하드닝: application/use_cases, contracts, integration/n8n, ops, deployment topology 경계 보강 |
-| 최근 완료 | 독립 Trend Intelligence Platform 방향의 개정 문서 세트 작성 |
-| 완료 조건 | 아키텍처/모듈/API/런타임/spec 문서에 UseCase, contracts, workflow/n8n 분리, observability, deployment topology, docs authority 반영 |
+| 목표 | v0.3 문서 하드닝: UseCase/Contracts 실제 소스 구조 고정, workflow/n8n/dispatch 분리, API 공통 계약과 환경 설정 기준 보강 |
+| 최근 완료 | v0.2 구현 경계 문서 하드닝 및 배포/운영/문서 인덱스 추가 |
+| 완료 조건 | 아키텍처/모듈/API/spec 문서에 application/use_cases, contracts, integration/n8n, runtime/dispatch, environment config, document metadata 기준 반영 |
 
 ## Code Consistency Rules
 
@@ -42,11 +42,11 @@
 | Contracts | `src/contracts/` | Core signal, consumer payload, API DTO, runtime/job 계약을 분리해 계층 간 의존성을 고정 |
 | Adapter Layer | `src/adapters/` | QTS/Generic/Workflow 소비자별 payload 변환 책임. Core가 소비자 포맷을 알지 않도록 분리 |
 | n8n Integration | `src/integration/n8n/` | n8n inbound webhook, outbound dispatch, verification, dispatch result 기록. Workflow Adapter와 분리 |
+| Runtime Dispatch | `src/runtime/dispatch/` | workflow payload dispatch 실행 정책, idempotency, retry, dispatch status 관리. Adapter mapping과 n8n HTTP gateway와 분리 |
 | API Layer | `src/api/` | FastAPI 기반 `/api/v1` REST API, 웹훅, ops endpoint 경계 유지 |
 | Batch/Scheduler | `src/batch/` 또는 `src/scheduler/` | 장전/장후/야간 배치 중심. KST 09:00~15:30 대량 작업 금지 가드 포함 |
-| Contracts | `src/*/contracts.py` | RawNewsItem, NormalizedNewsItem, NewsEvaluation, MarketSignal, ThemeSignal, StockSignal, TrendSnapshot 등 타입 계약 |
 | Persistence | `src/db/` | PostgreSQL 우선. 초기 검증용 JSONL은 보조 저장소로만 사용 |
-| Workflow Payload | `src/adapters/workflow/` | n8n inbound/outbound 최소 시나리오부터 구현하고 자동화 라우팅 조건을 명시 |
+| Workflow Payload | `src/adapters/workflow/` | neutral signal을 자동화/워크플로우 payload로 변환. n8n 인증, webhook, HTTP dispatch는 담당하지 않음 |
 | News Credibility | `src/core/credibility.py` | source tier, source_weight, evidence/corroboration, content quality, conflict penalty 기반 신뢰도 평가 |
 
 ## Project Context

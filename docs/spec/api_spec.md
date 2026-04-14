@@ -14,11 +14,125 @@ API 계층의 목적은 다음과 같다.
 
 - 모든 endpoint는 `/api/v1` 하위에 둔다.
 - API route는 `src/api/routes/`에 그룹별로 분리한다.
+- API route는 Application UseCase를 호출하고 Core/Adapter/Repository를 직접 조합하지 않는다.
 - write/heavy endpoint는 `src/api/dependencies.py`의 장중 보호 dependency를 통과해야 한다.
 - response는 Core 내부 모델을 그대로 노출하지 않고 API schema로 변환한다.
 - timestamp는 ISO 8601 문자열을 사용하고 timezone을 명시한다.
 - pagination이 필요한 조회 API는 `limit`, `offset` 또는 cursor 방식을 명시적으로 선택한다.
 - 초기 인증 방식은 배포 전 확정하되, 운영 배포 전에는 최소 Bearer token 또는 reverse proxy 인증을 둔다.
+- write/heavy endpoint는 `Idempotency-Key`를 지원한다.
+- 모든 응답은 가능한 경우 `correlation_id`를 포함한다.
+- n8n webhook은 shared secret 또는 HMAC signature를 검증한다.
+
+### 2.1 인증 모드
+
+| 모드 | 용도 |
+|------|------|
+| `local_dev_disabled` | 로컬 개발 전용. 운영 금지 |
+| `bearer_token` | 초기 운영 API 기본 후보 |
+| `reverse_proxy_auth` | OCI reverse proxy 뒤에서 인증 위임 |
+| `webhook_signature` | n8n inbound webhook 검증 |
+
+운영 환경에서는 `local_dev_disabled`를 사용할 수 없다. 인증 실패는 표준 에러 모델로 응답하고 `correlation_id`가 있으면 로그에 함께 기록한다.
+
+### 2.1.1 Idempotency Key 정책
+
+적용 대상:
+
+- 분석 실행
+- batch ingest
+- rebuild
+- workflow dispatch
+- job retry
+
+정책:
+
+- `Idempotency-Key`가 없으면 write/heavy endpoint는 `400` 또는 endpoint별 정책 에러를 반환할 수 있다.
+- 같은 key와 같은 body는 기존 `job_id` 또는 `dispatch_id`를 반환한다.
+- 같은 key와 다른 body는 `IDEMPOTENCY_CONFLICT`를 반환한다.
+- MVP 기본 TTL은 24시간 이상으로 둔다.
+- idempotency key는 Application UseCase 또는 Runtime Dispatch 경계에서 확인하며, Adapter 내부에서 처리하지 않는다.
+
+### 2.1.2 Webhook Signature 검증
+
+n8n inbound webhook은 다음 중 하나를 사용한다.
+
+- shared secret header
+- HMAC signature header
+
+검증 대상:
+
+- raw request body
+- timestamp 또는 nonce가 도입될 경우 replay window
+- source header
+
+검증 실패 시 Core ingestion을 호출하지 않는다.
+
+### 2.2 표준 에러 모델
+
+```json
+{
+  "error": {
+    "code": "VALIDATION_ERROR",
+    "message": "요청 값이 올바르지 않습니다.",
+    "details": {
+      "field": "as_of"
+    }
+  },
+  "correlation_id": "corr_20260414_0001"
+}
+```
+
+권장 필드:
+
+- `error.code`: 기계 판독 가능한 고정 코드
+- `error.message`: 운영자/클라이언트가 이해할 수 있는 짧은 설명
+- `error.details`: endpoint별 추가 정보
+- `correlation_id`: 요청 추적 id
+
+권장 에러 코드:
+
+- `VALIDATION_ERROR`
+- `UNAUTHORIZED`
+- `FORBIDDEN`
+- `MARKET_HOURS_GUARD`
+- `IDEMPOTENCY_CONFLICT`
+- `WEBHOOK_SIGNATURE_INVALID`
+- `JOB_NOT_FOUND`
+- `DISPATCH_FAILED`
+- `INTERNAL_ERROR`
+
+### 2.3 비동기 Job 응답
+
+```json
+{
+  "job_id": "job_20260414_daily_001",
+  "status": "queued",
+  "correlation_id": "corr_20260414_0001"
+}
+```
+
+비동기 endpoint는 작업 완료를 기다리지 않고 job 상태를 반환할 수 있다. 상태 조회는 `GET /api/v1/jobs/status`를 사용한다.
+
+### 2.4 Pagination / Filter / Sort
+
+- `limit` 기본값: 50
+- `limit` 최대값: 500
+- `offset` 또는 cursor 방식 중 endpoint별로 하나를 선택한다.
+- `sort`: 정렬 필드
+- `order`: `asc` 또는 `desc`
+- 시간 필터는 ISO 8601을 사용한다.
+- 기본 정렬은 최신 생성 시각 내림차순이다.
+- symbol/theme/source 필터는 endpoint별로 배열 또는 단일 문자열 중 하나를 명시한다.
+
+### 2.5 Signal DTO와 Payload DTO 분리
+
+Signal API는 neutral DTO만 반환한다.
+
+- 허용: `bias_hint`, `impact_score`, `confidence_score`, `driver_themes`
+- 금지: `market_bias`, `risk_overrides`, `universe_adjustments`
+
+`market_bias`는 QTS Adapter payload에서만 사용한다.
 
 ## 3. 장중 정책
 
@@ -200,7 +314,7 @@ query:
   "snapshot_id": "snapshot_20260414_morning",
   "as_of": "2026-04-14T08:00:00+09:00",
   "market_signal": {
-    "market_bias": "risk_on",
+    "bias_hint": "risk_on",
     "confidence_score": 0.71,
     "impact_score": 0.64,
     "drivers": ["AI infrastructure", "semiconductor demand"]
