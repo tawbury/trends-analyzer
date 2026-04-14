@@ -12,11 +12,21 @@ def configure_logging() -> None:
     )
 
 
+def correlation_fields(correlation: CorrelationContext) -> dict[str, str]:
+    return {
+        "correlation_id": correlation.correlation_id,
+        "job_id": correlation.job_id,
+        "requested_by": correlation.requested_by,
+    }
+
+
 def log_with_context(logger: logging.Logger, message: str, correlation: CorrelationContext) -> None:
+    fields = correlation_fields(correlation)
     logger.info(
         "%s correlation_id=%s job_id=%s requested_by=%s",
         message,
-        correlation.correlation_id,
-        correlation.job_id,
-        correlation.requested_by,
+        fields["correlation_id"],
+        fields["job_id"],
+        fields["requested_by"],
+        extra=fields,
     )

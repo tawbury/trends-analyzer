@@ -1,44 +1,34 @@
 from __future__ import annotations
 
-from itertools import count
-from uuid import uuid4
-
 from fastapi import Header
 
-from src.adapters.qts.adapter import QtsAdapter
 from src.application.use_cases.analyze_daily_trends import AnalyzeDailyTrendsUseCase
+from src.bootstrap.container import build_correlation_context as build_context
+from src.bootstrap.container import get_container
+from src.contracts.ports import IdempotencyRepository
 from src.contracts.runtime import CorrelationContext
-from src.core.aggregate import TrendAggregator
-from src.core.normalize import NewsNormalizer
-from src.core.score import MockNewsScorer
-from src.db.repositories.memory import InMemoryQtsPayloadRepository, InMemorySnapshotRepository
-from src.ingestion.loaders.local_fixture_loader import LocalFixtureNewsSource
-
-_job_sequence = count(start=1)
-_snapshot_repository = InMemorySnapshotRepository()
-_qts_payload_repository = InMemoryQtsPayloadRepository()
-_use_case = AnalyzeDailyTrendsUseCase(
-    news_source=LocalFixtureNewsSource(),
-    normalizer=NewsNormalizer(),
-    scorer=MockNewsScorer(),
-    aggregator=TrendAggregator(),
-    qts_adapter=QtsAdapter(),
-    snapshot_repository=_snapshot_repository,
-    qts_payload_repository=_qts_payload_repository,
-)
 
 
 def build_correlation_context(
     x_correlation_id: str | None = Header(default=None, alias="X-Correlation-Id"),
     x_requested_by: str | None = Header(default=None, alias="X-Requested-By"),
 ) -> CorrelationContext:
-    sequence = next(_job_sequence)
-    return CorrelationContext(
-        correlation_id=x_correlation_id or f"corr_{uuid4().hex[:12]}",
-        job_id=f"job_mvp_daily_{sequence:04d}",
+    return build_context(
+        correlation_id=x_correlation_id,
         requested_by=x_requested_by or "api",
+        job_prefix="job_mvp_daily",
     )
 
 
 def get_analyze_daily_use_case() -> AnalyzeDailyTrendsUseCase:
-    return _use_case
+    return get_container().analyze_daily_use_case
+
+
+def get_idempotency_repository() -> IdempotencyRepository:
+    return get_container().idempotency_repository
+
+
+def get_idempotency_key(
+    idempotency_key: str | None = Header(default=None, alias="Idempotency-Key"),
+) -> str | None:
+    return idempotency_key

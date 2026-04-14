@@ -2,12 +2,16 @@ from __future__ import annotations
 
 import logging
 
-from src.adapters.qts.adapter import QtsAdapter
-from src.contracts.ports import NewsSourcePort, QtsPayloadRepository, SnapshotRepository
+from src.contracts.ports import (
+    NewsNormalizerPort,
+    NewsScorerPort,
+    NewsSourcePort,
+    QtsAdapterPort,
+    QtsPayloadRepository,
+    SnapshotRepository,
+    TrendAggregatorPort,
+)
 from src.contracts.runtime import AnalyzeDailyCommand, AnalyzeDailyResult
-from src.core.aggregate import TrendAggregator
-from src.core.normalize import NewsNormalizer
-from src.core.score import MockNewsScorer
 from src.shared.logging import log_with_context
 from src.shared.market_hours import assert_heavy_job_allowed
 
@@ -19,10 +23,10 @@ class AnalyzeDailyTrendsUseCase:
         self,
         *,
         news_source: NewsSourcePort,
-        normalizer: NewsNormalizer,
-        scorer: MockNewsScorer,
-        aggregator: TrendAggregator,
-        qts_adapter: QtsAdapter,
+        normalizer: NewsNormalizerPort,
+        scorer: NewsScorerPort,
+        aggregator: TrendAggregatorPort,
+        qts_adapter: QtsAdapterPort,
         snapshot_repository: SnapshotRepository,
         qts_payload_repository: QtsPayloadRepository,
         rules_version: str = "rules-mvp-0.1",
@@ -40,7 +44,7 @@ class AnalyzeDailyTrendsUseCase:
         assert_heavy_job_allowed(command.as_of, job_type=command.runtime_mode.value)
         log_with_context(logger, "analyze_daily_started", command.correlation)
 
-        raw_items = await self.news_source.fetch_daily()
+        raw_items = await self.news_source.fetch_daily(as_of=command.as_of)
         normalized_items = [self.normalizer.normalize(item) for item in raw_items]
         evaluations = [
             self.scorer.evaluate(item, evaluated_at=command.as_of)

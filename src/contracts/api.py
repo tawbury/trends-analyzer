@@ -1,10 +1,9 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
+from pydantic import BaseModel, Field
 
 
-@dataclass(frozen=True)
-class AnalyzeDailyResponse:
+class AnalyzeDailyResponse(BaseModel):
     snapshot_id: str
     qts_payload_id: str
     job_id: str
@@ -12,14 +11,12 @@ class AnalyzeDailyResponse:
     status: str
 
 
-@dataclass(frozen=True)
-class ErrorBody:
+class ErrorBody(BaseModel):
     code: str
     message: str
-    details: dict[str, str]
+    details: dict[str, str] = Field(default_factory=dict)
 
 
-@dataclass(frozen=True)
-class ErrorResponse:
+class ErrorResponse(BaseModel):
     error: ErrorBody
     correlation_id: str

@@ -1,15 +1,16 @@
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from src.contracts.core import RawNewsItem
-from src.shared.clock import now_kst
 
 
 class LocalFixtureNewsSource:
-    async def fetch_daily(self) -> list[RawNewsItem]:
-        collected_at = now_kst()
-        published_at = datetime.fromisoformat("2026-04-14T06:30:00+09:00")
+    async def fetch_daily(self, as_of: datetime) -> list[RawNewsItem]:
+        collected_at = as_of
+        published_at = as_of.replace(hour=6, minute=30, second=0, microsecond=0)
+        if published_at > as_of:
+            published_at = published_at - timedelta(days=1)
         return [
             RawNewsItem(
                 id="raw_fixture_001",
