@@ -6,7 +6,12 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
-from src.contracts.symbols import SymbolCatalog, SymbolCatalogValidationReport, SymbolRecord
+from src.contracts.symbols import (
+    SymbolCatalog,
+    SymbolCatalogValidationReport,
+    SymbolRecord,
+    SymbolSelectionReport,
+)
 
 
 class JsonSymbolCatalogRepository:
@@ -38,6 +43,19 @@ class JsonSymbolCatalogRepository:
         payload = _to_jsonable(report)
         dated_path = self.directory / f"{report.generated_at:%Y%m%d}_symbol_catalog_validation.json"
         latest_path = self.directory / "latest_symbol_catalog_validation.json"
+        for path in (dated_path, latest_path):
+            path.write_text(
+                json.dumps(payload, ensure_ascii=False, indent=2, sort_keys=True),
+                encoding="utf-8",
+            )
+
+    async def save_selection_report(self, report: SymbolSelectionReport) -> None:
+        self.save_selection_report_sync(report)
+
+    def save_selection_report_sync(self, report: SymbolSelectionReport) -> None:
+        payload = _to_jsonable(report)
+        latest_path = self.directory / "latest_source_symbol_selection.json"
+        dated_path = self.directory / f"{report.generated_at:%Y%m%d}_source_symbol_selection.json"
         for path in (dated_path, latest_path):
             path.write_text(
                 json.dumps(payload, ensure_ascii=False, indent=2, sort_keys=True),

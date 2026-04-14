@@ -7,7 +7,7 @@ from src.contracts.symbols import SymbolRecord
 
 _SPACE_RE = re.compile(r"\s+")
 _PREFERRED_RE = re.compile(r"(\d*우[B]?$|우선주$)")
-_ETF_MARKERS = ("ETF", "레버리지", "인버스", "선물", "TR")
+_ETF_MARKERS = ("ETF", "레버리지", "인버스", "선물")
 _ETN_MARKERS = ("ETN",)
 _REIT_MARKERS = ("리츠", "REIT")
 _SPAC_MARKERS = ("스팩", "SPAC")

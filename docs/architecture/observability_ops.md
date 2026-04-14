@@ -12,6 +12,8 @@
 - 모든 API 요청, batch job, workflow dispatch에는 `correlation_id`를 포함한다.
 - 장중 보호 가드 위반은 warning 이상으로 기록한다.
 - source별 수집 실패는 전체 batch 실패와 분리해 기록한다.
+- provider source 실행은 요청 symbol 수, 성공 symbol 수, 실패 symbol 수, item count, partial success 여부를 기록한다.
+- symbol selection은 catalog id, 선택 정책, selected symbol count, invalid-code 제외 수를 기록한다.
 - payload 생성과 dispatch 실행은 별도 이벤트로 기록한다.
 
 권장 공통 필드:
@@ -71,6 +73,29 @@ Batch job은 다음 상태를 기록한다.
 - `output_count`
 - `error_code`
 - `error_message`
+
+## 4.1 Source Execution Tracking
+
+KIS/Kiwoom source 실행은 다음 이벤트를 남긴다.
+
+- `source_symbol_selection`
+- `source_fetch_started`
+- `source_execution_report`
+- `source_fetch_failed`
+- `source_fetch_completed`
+
+필수 필드:
+
+- `catalog_id`
+- `symbol_selection_policy`
+- `selected_symbol_count`
+- `invalid_code_excluded_count`
+- `provider`
+- `requested_symbol_count`
+- `succeeded_symbol_count`
+- `failed_symbol_count`
+- `item_count`
+- `partial_success`
 
 ## 5. Workflow Dispatch Results
 

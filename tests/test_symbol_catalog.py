@@ -10,7 +10,11 @@ from src.contracts.symbols import SymbolRecord
 from src.db.repositories.symbol_catalog_repository import JsonSymbolCatalogRepository
 from src.ingestion.catalog.json_artifact_loader import JsonArtifactSymbolCatalogSource
 from src.ingestion.catalog.lookup import SymbolCatalogLookup
-from src.ingestion.catalog.selection import SymbolSelectionPolicy, select_source_symbols
+from src.ingestion.catalog.selection import (
+    SymbolSelectionPolicy,
+    build_symbol_selection_report,
+    select_source_symbols,
+)
 from src.ingestion.catalog.symbol_catalog_builder import parse_kis_master_text, parse_stock_code_csv
 
 
@@ -113,6 +117,75 @@ class SymbolCatalogTest(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(lookup.get_by_code("005930").name, "Samsung Electronics")
         self.assertEqual([record.symbol for record in lookup.find_by_alias("LowPriceStock")], ["000100"])
         self.assertEqual(selected, ["000100"])
+
+    async def test_symbol_selection_report_counts_invalid_code_exclusions(self) -> None:
+        temp_dir = TemporaryDirectory()
+        self.addCleanup(temp_dir.cleanup)
+        repository = JsonSymbolCatalogRepository(directory=Path(temp_dir.name))
+        use_case = RefreshSymbolCatalogUseCase(
+            source=StaticSymbolCatalogSource(),
+            repository=repository,
+        )
+        catalog = await use_case.execute(
+            as_of=datetime.fromisoformat("2026-04-15T16:10:00+09:00")
+        )
+        catalog = type(catalog)(
+            id=catalog.id,
+            as_of=catalog.as_of,
+            source=catalog.source,
+            records=[
+                *catalog.records,
+                SymbolRecord(
+                    symbol="KR7000100008",
+                    name="Bad",
+                    market="KOSPI",
+                    metadata={"classification": "stock"},
+                ),
+            ],
+            generated_at=catalog.generated_at,
+            metadata=catalog.metadata,
+        )
+
+        report = build_symbol_selection_report(
+            policy=SymbolSelectionPolicy(
+                mode="catalog_filtered",
+                explicit_symbols=[],
+                markets=["KOSPI"],
+                classifications=["stock"],
+                valid_code_only=True,
+            ),
+            catalog=catalog,
+            generated_at=datetime.fromisoformat("2026-04-15T16:20:00+09:00"),
+        )
+
+        self.assertEqual(report.catalog_total_count, 3)
+        self.assertEqual(report.invalid_code_excluded_count, 1)
+        self.assertEqual(report.selected_symbol_count, 2)
+
+    async def test_catalog_all_policy_ignores_market_filters(self) -> None:
+        temp_dir = TemporaryDirectory()
+        self.addCleanup(temp_dir.cleanup)
+        repository = JsonSymbolCatalogRepository(directory=Path(temp_dir.name))
+        use_case = RefreshSymbolCatalogUseCase(
+            source=StaticSymbolCatalogSource(),
+            repository=repository,
+        )
+        catalog = await use_case.execute(
+            as_of=datetime.fromisoformat("2026-04-15T16:10:00+09:00")
+        )
+
+        selected = select_source_symbols(
+            policy=SymbolSelectionPolicy(
+                mode="catalog_all",
+                explicit_symbols=[],
+                markets=["KOSDAQ"],
+                classifications=["etf"],
+                valid_code_only=True,
+            ),
+            catalog=catalog,
+        )
+
+        self.assertEqual(selected, ["000100", "005930"])
 
 
 if __name__ == "__main__":

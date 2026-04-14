@@ -138,6 +138,7 @@ shared <- all layers
 - provider-specific 원천 포맷을 `SymbolRecord`로 정규화한다.
 - code/name/alias lookup과 source 실행용 symbol selection을 제공한다.
 - validation report를 생성해 종목 코드, 중복, 시장 분포, 분류 분포, 의심 record를 점검한다.
+- selection report를 생성해 catalog id, 선택 정책, 선택 종목 수, invalid-code 제외 수를 운영에서 확인할 수 있게 한다.
 - QTS/Observer universe의 전일종가 4000원 미만 제외 필터를 적용하지 않는다.
 - 전체 시장 catalog와 후속 news discovery 후보군 생성을 위한 입력을 제공한다.
 
@@ -146,6 +147,19 @@ shared <- all layers
 - QTS 매매 유니버스 정책 구현
 - Core signal scoring 구현
 - API transport DTO import
+
+### 4.6.1 Provider source 실행 리포트
+
+`src/ingestion/loaders/`의 provider source는 실행 후 `SourceExecutionReport`를 남긴다.
+
+- 요청한 symbol 수
+- 성공 symbol 수
+- 실패 symbol 수
+- 생성된 item 수
+- partial success 여부
+- 실패 symbol 목록
+
+이 리포트는 Core scoring 결과가 아니라 runtime/source 관측성 자료다.
 
 ### 4.0.1 `src/application/use_cases/`
 

@@ -5,7 +5,7 @@ from datetime import datetime
 
 from src.contracts.core import RawNewsItem
 from src.contracts.ports import NewsSourcePort
-from src.contracts.runtime import CorrelationContext
+from src.contracts.runtime import CorrelationContext, SourceExecutionReport
 from src.shared.logging import correlation_fields
 
 logger = logging.getLogger(__name__)
@@ -30,7 +30,7 @@ class CompositeNewsSource:
         failures: list[str] = []
         for source in self.sources:
             source_name = _source_name(source)
-            _log("source_fetch_started", source_name, 0, correlation)
+            _log_source_start(source, source_name, correlation)
             try:
                 source_items = await source.fetch_daily(as_of=as_of, correlation=correlation)
             except Exception as exc:
@@ -41,6 +41,9 @@ class CompositeNewsSource:
                 continue
             items.extend(source_items)
             _log("source_fetch_completed", source_name, len(source_items), correlation)
+            report = getattr(source, "last_execution_report", None)
+            if isinstance(report, SourceExecutionReport):
+                _log_execution_report(report, correlation)
 
         if failures and not items:
             _log("source_fetch_all_failed", ",".join(failures), 0, correlation)
@@ -76,5 +79,75 @@ def _log(
         source_name,
         item_count,
         error or "",
+        extra=fields,
+    )
+
+
+def _log_source_start(
+    source: NewsSourcePort,
+    source_name: str,
+    correlation: CorrelationContext | None,
+) -> None:
+    report = getattr(source, "symbol_selection_report", None)
+    fields = {
+        "event": "source_fetch_started",
+        "source": source_name,
+        "item_count": "0",
+    }
+    if correlation:
+        fields.update(correlation_fields(correlation))
+    if report:
+        fields.update(
+            {
+                "catalog_id": report.catalog_id,
+                "symbol_selection_policy": report.policy,
+                "selected_symbol_count": str(report.selected_symbol_count),
+                "market_filters": ",".join(report.market_filters),
+                "classification_filters": ",".join(report.classification_filters),
+                "explicit_override_used": str(report.explicit_override_used).lower(),
+            }
+        )
+    logger.info(
+        (
+            "source_fetch_started source=%s catalog_id=%s policy=%s selected_symbols=%s "
+            "markets=%s classifications=%s explicit_override=%s"
+        ),
+        source_name,
+        getattr(report, "catalog_id", "") or "none",
+        getattr(report, "policy", "") or "none",
+        getattr(report, "selected_symbol_count", 0),
+        ",".join(getattr(report, "market_filters", [])),
+        ",".join(getattr(report, "classification_filters", [])),
+        getattr(report, "explicit_override_used", False),
+        extra=fields,
+    )
+
+
+def _log_execution_report(
+    report: SourceExecutionReport,
+    correlation: CorrelationContext | None,
+) -> None:
+    fields = {
+        "event": "source_execution_report",
+        "source": report.provider,
+        "requested_symbol_count": str(report.requested_symbol_count),
+        "succeeded_symbol_count": str(report.succeeded_symbol_count),
+        "failed_symbol_count": str(report.failed_symbol_count),
+        "item_count": str(report.item_count),
+        "partial_success": str(report.partial_success).lower(),
+    }
+    if correlation:
+        fields.update(correlation_fields(correlation))
+    logger.info(
+        (
+            "source_execution_report provider=%s requested_symbols=%s "
+            "succeeded_symbols=%s failed_symbols=%s item_count=%s partial_success=%s"
+        ),
+        report.provider,
+        report.requested_symbol_count,
+        report.succeeded_symbol_count,
+        report.failed_symbol_count,
+        report.item_count,
+        report.partial_success,
         extra=fields,
     )

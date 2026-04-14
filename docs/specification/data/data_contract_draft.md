@@ -77,10 +77,37 @@ SymbolCatalogValidationReport:
 - `classification_distribution`
 - `suspicious_records`
 
+SymbolSelectionReport:
+
+- `generated_at`
+- `policy`
+- `catalog_id`
+- `explicit_override_used`
+- `selected_symbol_count`
+- `selected_records`
+- `catalog_total_count`
+- `valid_code_count`
+- `invalid_code_excluded_count`
+- `market_filters`
+- `classification_filters`
+- `limit`
+
 주의:
 
 - QTS/Observer universe의 전일종가 4000원 미만 제외 필터를 적용하지 않는다.
 - 가격, 거래정지, 관리종목 여부 같은 provider metadata는 보존할 수 있지만 catalog 포함/제외 정책으로 즉시 사용하지 않는다.
+
+### SourceExecutionReport
+
+Provider source 실행 후 런타임 관측성을 위해 다음 값을 기록한다.
+
+- `provider`
+- `requested_symbol_count`
+- `succeeded_symbol_count`
+- `failed_symbol_count`
+- `item_count`
+- `partial_success`
+- `failed_symbols`
 
 ### RawNewsItem
 

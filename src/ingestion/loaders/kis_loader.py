@@ -1,10 +1,11 @@
 from __future__ import annotations
 
+import logging
 from datetime import datetime, timedelta
 from typing import Any
 
 from src.contracts.core import RawNewsItem
-from src.contracts.runtime import CorrelationContext
+from src.contracts.runtime import CorrelationContext, SourceExecutionReport
 from src.ingestion.clients.kis_client import KisClient
 from src.ingestion.loaders.provider_mapping import (
     compact_text,
@@ -12,6 +13,8 @@ from src.ingestion.loaders.provider_mapping import (
     parse_provider_datetime,
     provider_metadata,
 )
+
+logger = logging.getLogger(__name__)
 
 
 class KisMarketDataSource:
@@ -29,6 +32,15 @@ class KisMarketDataSource:
         self.symbols = symbols
         self.invest_opinion_lookback_days = invest_opinion_lookback_days
         self.invest_opinion_limit_per_symbol = invest_opinion_limit_per_symbol
+        self.last_execution_report = SourceExecutionReport(
+            provider=self.source_name,
+            requested_symbol_count=len(symbols),
+            succeeded_symbol_count=0,
+            failed_symbol_count=0,
+            item_count=0,
+            partial_success=False,
+            failed_symbols=[],
+        )
 
     async def fetch_daily(
         self,
@@ -36,44 +48,72 @@ class KisMarketDataSource:
         correlation: CorrelationContext | None = None,
     ) -> list[RawNewsItem]:
         items: list[RawNewsItem] = []
+        succeeded_symbols: list[str] = []
+        failed_symbols: list[str] = []
         for symbol in self.symbols:
-            opinion_items = self._fetch_invest_opinion_items(symbol=symbol, as_of=as_of)
-            if opinion_items:
-                items.extend(opinion_items)
-                continue
-
-            response = self.client.get_domestic_quote(symbol)
-            output = _single_output(response)
-            name = _field(output, "hts_kor_isnm", "name", fallback=symbol)
-            current_price = normalize_numeric_text(_field(output, "stck_prpr", "current_price"))
-            change_rate = _field(output, "prdy_ctrt", "change_rate")
-            volume = _field(output, "acml_vol", "volume")
-            title = f"KIS market quote signal: {name}({symbol})"
-            body = compact_text(
-                f"{name} current price {current_price}" if current_price else "",
-                f"change rate {change_rate}%" if change_rate else "",
-                f"accumulated volume {volume}" if volume else "",
-            )
-            items.append(
-                RawNewsItem(
-                    id=f"raw_kis_{symbol}_{as_of:%Y%m%d%H%M%S}",
-                    source=self.source_name,
-                    source_id=f"kis:quote:{symbol}:{as_of:%Y%m%d}",
-                    title=title,
-                    body=body or title,
-                    url=f"kis://domestic-stock/quote/{symbol}",
-                    published_at=as_of,
-                    collected_at=as_of,
-                    language="ko",
-                    symbols=[symbol],
-                    metadata={
-                        **provider_metadata("kis", response),
-                        "mapping_type": "market_quote_as_raw_item",
-                        "provider_endpoint": "inquire-price",
-                    },
+            try:
+                symbol_items = self._fetch_symbol_items(symbol=symbol, as_of=as_of)
+            except Exception as exc:
+                failed_symbols.append(symbol)
+                logger.warning(
+                    "source_symbol_fetch_failed provider=%s symbol=%s error=%s",
+                    self.source_name,
+                    symbol,
+                    str(exc),
                 )
-            )
+                continue
+            items.extend(symbol_items)
+            succeeded_symbols.append(symbol)
+
+        self.last_execution_report = SourceExecutionReport(
+            provider=self.source_name,
+            requested_symbol_count=len(self.symbols),
+            succeeded_symbol_count=len(succeeded_symbols),
+            failed_symbol_count=len(failed_symbols),
+            item_count=len(items),
+            partial_success=bool(succeeded_symbols and failed_symbols),
+            failed_symbols=failed_symbols,
+        )
+        if failed_symbols and not succeeded_symbols:
+            raise RuntimeError(f"KIS source failed for all requested symbols: {', '.join(failed_symbols)}")
         return items
+
+    def _fetch_symbol_items(self, *, symbol: str, as_of: datetime) -> list[RawNewsItem]:
+        opinion_items = self._fetch_invest_opinion_items(symbol=symbol, as_of=as_of)
+        if opinion_items:
+            return opinion_items
+
+        response = self.client.get_domestic_quote(symbol)
+        output = _single_output(response)
+        name = _field(output, "hts_kor_isnm", "name", fallback=symbol)
+        current_price = normalize_numeric_text(_field(output, "stck_prpr", "current_price"))
+        change_rate = _field(output, "prdy_ctrt", "change_rate")
+        volume = _field(output, "acml_vol", "volume")
+        title = f"KIS market quote signal: {name}({symbol})"
+        body = compact_text(
+            f"{name} current price {current_price}" if current_price else "",
+            f"change rate {change_rate}%" if change_rate else "",
+            f"accumulated volume {volume}" if volume else "",
+        )
+        return [
+            RawNewsItem(
+                id=f"raw_kis_{symbol}_{as_of:%Y%m%d%H%M%S}",
+                source=self.source_name,
+                source_id=f"kis:quote:{symbol}:{as_of:%Y%m%d}",
+                title=title,
+                body=body or title,
+                url=f"kis://domestic-stock/quote/{symbol}",
+                published_at=as_of,
+                collected_at=as_of,
+                language="ko",
+                symbols=[symbol],
+                metadata={
+                    **provider_metadata("kis", response),
+                    "mapping_type": "market_quote_as_raw_item",
+                    "provider_endpoint": "inquire-price",
+                },
+            )
+        ]
 
     def _fetch_invest_opinion_items(self, *, symbol: str, as_of: datetime) -> list[RawNewsItem]:
         end_date = as_of.strftime("%Y%m%d")

@@ -27,9 +27,9 @@
 | 항목 | 내용 |
 |------|------|
 | 작업 브랜치 | `main` |
-| 목표 | symbol catalog 품질 검증, alias/name 정규화, source symbol selection, lookup 계층 추가 |
-| 최근 완료 | symbol catalog validation report, alias/query keyword 정규화, lookup, catalog 기반 source symbol selection 구현 및 검증 |
-| 완료 조건 | 충족: catalog validation report 생성, normalized alias/query fields 저장, 설정 기반 active source symbol selection과 lookup 테스트 통과 |
+| 목표 | symbol catalog selection 결과를 KIS/Kiwoom runtime source 실행에 연결하고 운영 가시성 추가 |
+| 최근 완료 | catalog 기반 source symbol selection artifact, provider source execution report, invalid-code exclusion observability 구현 |
+| 완료 조건 | 충족: catalog 기반 selected symbols가 provider source 생성에 사용되고 selection/source execution report 로그와 artifact 검증 |
 
 ## Code Consistency Rules
 
@@ -50,6 +50,7 @@
 | News Credibility | `src/core/credibility.py` | source tier, source_weight, evidence/corroboration, content quality, conflict penalty 기반 신뢰도 평가 |
 | Symbol Catalog | `src/ingestion/catalog/`, `src/contracts/symbols.py` | Observer/QTS universe의 가격 필터를 재사용하지 않고 전체 시장 심볼 카탈로그와 후보군 artifact를 관리 |
 | Symbol Quality | `src/ingestion/catalog/validation.py`, `src/ingestion/catalog/normalization.py` | 종목 코드/이름/시장/분류 품질 리포트와 alias/query keyword 정규화 규칙 관리 |
+| Source Execution Report | `src/contracts/runtime.py`, `src/ingestion/loaders/` | provider별 요청 종목 수, 성공/실패 종목 수, item count, partial success 상태를 기록 |
 
 ## Project Context
 

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 from dataclasses import dataclass
 from functools import lru_cache
 from itertools import count
@@ -26,7 +27,10 @@ from src.db.repositories.jsonl import (
 from src.db.repositories.symbol_catalog_repository import JsonSymbolCatalogRepository
 from src.ingestion.catalog.json_artifact_loader import JsonArtifactSymbolCatalogSource
 from src.ingestion.catalog.kis_stock_code_source import KisStockCodeCatalogSource
-from src.ingestion.catalog.selection import SymbolSelectionPolicy, select_source_symbols
+from src.ingestion.catalog.selection import (
+    SymbolSelectionPolicy,
+    build_symbol_selection_report,
+)
 from src.ingestion.clients.http import JsonHttpClient
 from src.ingestion.clients.kis_client import KisClient
 from src.ingestion.clients.kiwoom_client import KiwoomClient
@@ -34,7 +38,10 @@ from src.ingestion.loaders.composite import CompositeNewsSource
 from src.ingestion.loaders.kis_loader import KisMarketDataSource
 from src.ingestion.loaders.kiwoom_loader import KiwoomStockInfoSource
 from src.ingestion.loaders.local_fixture_loader import LocalFixtureNewsSource
+from src.shared.clock import now_kst
 from src.shared.config import Settings
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass(frozen=True)
@@ -97,10 +104,14 @@ def build_news_source(
     symbol_catalog_repository: JsonSymbolCatalogRepository | None = None,
 ) -> NewsSourcePort:
     active_sources = settings.active_sources or ["fixture"]
-    symbols = resolve_source_symbols(
+    selection_report = resolve_source_symbol_selection(
         settings,
         symbol_catalog_repository=symbol_catalog_repository,
     )
+    symbols = [record.symbol for record in selection_report.selected_records]
+    if symbol_catalog_repository is not None:
+        symbol_catalog_repository.save_selection_report_sync(selection_report)
+    _log_symbol_selection(selection_report)
     http = JsonHttpClient(timeout_seconds=settings.source_timeout_seconds)
     sources = []
 
@@ -109,40 +120,40 @@ def build_news_source(
         if normalized == "fixture":
             sources.append(LocalFixtureNewsSource())
         elif normalized == "kis":
-            sources.append(
-                KisMarketDataSource(
-                    client=KisClient(
-                        base_url=settings.kis_base_url,
-                        app_key=settings.kis_app_key,
-                        app_secret=settings.kis_app_secret,
-                        market_division_code=settings.kis_market_division_code,
-                        quote_tr_id=settings.kis_tr_id_quote,
-                        invest_opinion_tr_id=settings.kis_tr_id_invest_opinion,
-                        http=http,
-                        token_cache_path=settings.data_dir / "kis_token.json",
-                    ),
-                    symbols=symbols,
-                    invest_opinion_lookback_days=settings.kis_invest_opinion_lookback_days,
-                    invest_opinion_limit_per_symbol=settings.kis_invest_opinion_limit_per_symbol,
-                )
+            source = KisMarketDataSource(
+                client=KisClient(
+                    base_url=settings.kis_base_url,
+                    app_key=settings.kis_app_key,
+                    app_secret=settings.kis_app_secret,
+                    market_division_code=settings.kis_market_division_code,
+                    quote_tr_id=settings.kis_tr_id_quote,
+                    invest_opinion_tr_id=settings.kis_tr_id_invest_opinion,
+                    http=http,
+                    token_cache_path=settings.data_dir / "kis_token.json",
+                ),
+                symbols=symbols,
+                invest_opinion_lookback_days=settings.kis_invest_opinion_lookback_days,
+                invest_opinion_limit_per_symbol=settings.kis_invest_opinion_limit_per_symbol,
             )
+            setattr(source, "symbol_selection_report", selection_report)
+            sources.append(source)
         elif normalized == "kiwoom":
-            sources.append(
-                KiwoomStockInfoSource(
-                    client=KiwoomClient(
-                        mode=settings.kiwoom_mode,
-                        base_url=settings.kiwoom_base_url,
-                        app_key=settings.kiwoom_app_key,
-                        app_secret=settings.kiwoom_app_secret,
-                        account_no=settings.kiwoom_account_no,
-                        account_product_code=settings.kiwoom_account_product_code,
-                        stock_info_path=settings.kiwoom_stock_info_path,
-                        http=http,
-                        token_cache_path=settings.data_dir / "kiwoom_token.json",
-                    ),
-                    symbols=symbols,
-                )
+            source = KiwoomStockInfoSource(
+                client=KiwoomClient(
+                    mode=settings.kiwoom_mode,
+                    base_url=settings.kiwoom_base_url,
+                    app_key=settings.kiwoom_app_key,
+                    app_secret=settings.kiwoom_app_secret,
+                    account_no=settings.kiwoom_account_no,
+                    account_product_code=settings.kiwoom_account_product_code,
+                    stock_info_path=settings.kiwoom_stock_info_path,
+                    http=http,
+                    token_cache_path=settings.data_dir / "kiwoom_token.json",
+                ),
+                symbols=symbols,
             )
+            setattr(source, "symbol_selection_report", selection_report)
+            sources.append(source)
         else:
             raise ValueError(f"Unsupported source configured: {source_name}")
 
@@ -157,10 +168,24 @@ def resolve_source_symbols(
     *,
     symbol_catalog_repository: JsonSymbolCatalogRepository | None = None,
 ) -> list[str]:
+    return [
+        record.symbol
+        for record in resolve_source_symbol_selection(
+            settings,
+            symbol_catalog_repository=symbol_catalog_repository,
+        ).selected_records
+    ]
+
+
+def resolve_source_symbol_selection(
+    settings: Settings,
+    *,
+    symbol_catalog_repository: JsonSymbolCatalogRepository | None = None,
+):
     catalog = None
     if symbol_catalog_repository is not None:
         catalog = symbol_catalog_repository.get_latest_sync()
-    return select_source_symbols(
+    return build_symbol_selection_report(
         policy=SymbolSelectionPolicy(
             mode=settings.source_symbol_policy,
             explicit_symbols=settings.source_symbols or ["005930", "000660"],
@@ -170,6 +195,36 @@ def resolve_source_symbols(
             valid_code_only=settings.source_symbol_valid_code_only,
         ),
         catalog=catalog,
+        generated_at=now_kst(),
+    )
+
+
+def _log_symbol_selection(selection_report) -> None:
+    logger.info(
+        (
+            "source_symbol_selection catalog_id=%s policy=%s selected_symbol_count=%s "
+            "catalog_total_count=%s valid_code_count=%s invalid_code_excluded_count=%s "
+            "markets=%s classifications=%s explicit_override=%s"
+        ),
+        selection_report.catalog_id or "none",
+        selection_report.policy,
+        selection_report.selected_symbol_count,
+        selection_report.catalog_total_count,
+        selection_report.valid_code_count,
+        selection_report.invalid_code_excluded_count,
+        ",".join(selection_report.market_filters),
+        ",".join(selection_report.classification_filters),
+        selection_report.explicit_override_used,
+        extra={
+            "event": "source_symbol_selection",
+            "catalog_id": selection_report.catalog_id,
+            "symbol_selection_policy": selection_report.policy,
+            "selected_symbol_count": str(selection_report.selected_symbol_count),
+            "catalog_total_count": str(selection_report.catalog_total_count),
+            "valid_code_count": str(selection_report.valid_code_count),
+            "invalid_code_excluded_count": str(selection_report.invalid_code_excluded_count),
+            "explicit_override_used": str(selection_report.explicit_override_used).lower(),
+        },
     )
 
 

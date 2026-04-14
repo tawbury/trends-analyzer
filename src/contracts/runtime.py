@@ -34,3 +34,14 @@ class AnalyzeDailyResult:
     qts_payload_id: str
     job_id: str
     correlation_id: str
+
+
+@dataclass(frozen=True)
+class SourceExecutionReport:
+    provider: str
+    requested_symbol_count: int
+    succeeded_symbol_count: int
+    failed_symbol_count: int
+    item_count: int
+    partial_success: bool
+    failed_symbols: list[str]

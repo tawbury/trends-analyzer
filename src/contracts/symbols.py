@@ -52,3 +52,19 @@ class SymbolCatalogValidationReport:
     market_distribution: dict[str, int]
     classification_distribution: dict[str, int]
     suspicious_records: list[SymbolValidationIssue] = field(default_factory=list)
+
+
+@dataclass(frozen=True)
+class SymbolSelectionReport:
+    generated_at: datetime
+    policy: str
+    catalog_id: str
+    explicit_override_used: bool
+    selected_symbol_count: int
+    selected_records: list[SymbolRecord]
+    catalog_total_count: int = 0
+    valid_code_count: int = 0
+    invalid_code_excluded_count: int = 0
+    market_filters: list[str] = field(default_factory=list)
+    classification_filters: list[str] = field(default_factory=list)
+    limit: int = 0

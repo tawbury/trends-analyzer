@@ -51,6 +51,13 @@ class FakeKiwoomClient:
         }
 
 
+class PartiallyFailingKiwoomClient:
+    def get_stock_info(self, symbol: str) -> dict[str, Any]:
+        if symbol == "000000":
+            raise RuntimeError("bad symbol")
+        return FakeKiwoomClient().get_stock_info(symbol)
+
+
 class SourceLoaderMappingTest(unittest.IsolatedAsyncioTestCase):
     async def test_kis_loader_maps_invest_opinion_to_raw_news_item(self) -> None:
         source = KisMarketDataSource(
@@ -68,6 +75,8 @@ class SourceLoaderMappingTest(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(items[0].symbols, ["005930"])
         self.assertIn("investment_opinion_as_raw_item", items[0].metadata["mapping_type"])
         self.assertIn("BUY", items[0].title)
+        self.assertEqual(source.last_execution_report.requested_symbol_count, 1)
+        self.assertEqual(source.last_execution_report.succeeded_symbol_count, 1)
 
     async def test_kiwoom_loader_maps_stock_info_to_raw_news_item(self) -> None:
         source = KiwoomStockInfoSource(client=FakeKiwoomClient(), symbols=["000660"])
@@ -78,6 +87,22 @@ class SourceLoaderMappingTest(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(len(items), 1)
         self.assertEqual(items[0].source, "kiwoom")
         self.assertEqual(items[0].symbols, ["000660"])
+        self.assertEqual(source.last_execution_report.item_count, 1)
+
+    async def test_kiwoom_loader_records_partial_symbol_failures(self) -> None:
+        source = KiwoomStockInfoSource(
+            client=PartiallyFailingKiwoomClient(),
+            symbols=["000660", "000000"],
+        )
+        items = await source.fetch_daily(
+            as_of=datetime.fromisoformat("2026-04-15T16:10:00+09:00")
+        )
+
+        self.assertEqual(len(items), 1)
+        self.assertEqual(source.last_execution_report.requested_symbol_count, 2)
+        self.assertEqual(source.last_execution_report.succeeded_symbol_count, 1)
+        self.assertEqual(source.last_execution_report.failed_symbol_count, 1)
+        self.assertTrue(source.last_execution_report.partial_success)
         self.assertIn("stock_info_as_raw_item", items[0].metadata["mapping_type"])
 
 
