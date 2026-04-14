@@ -6,7 +6,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
-from src.contracts.symbols import SymbolCatalog, SymbolRecord
+from src.contracts.symbols import SymbolCatalog, SymbolCatalogValidationReport, SymbolRecord
 
 
 class JsonSymbolCatalogRepository:
@@ -25,11 +25,24 @@ class JsonSymbolCatalogRepository:
             )
 
     async def get_latest(self) -> SymbolCatalog | None:
+        return self.get_latest_sync()
+
+    def get_latest_sync(self) -> SymbolCatalog | None:
         path = self.directory / "latest_symbol_catalog.json"
         if not path.exists():
             return None
         payload = json.loads(path.read_text(encoding="utf-8"))
         return _catalog_from_dict(payload)
+
+    async def save_validation_report(self, report: SymbolCatalogValidationReport) -> None:
+        payload = _to_jsonable(report)
+        dated_path = self.directory / f"{report.generated_at:%Y%m%d}_symbol_catalog_validation.json"
+        latest_path = self.directory / "latest_symbol_catalog_validation.json"
+        for path in (dated_path, latest_path):
+            path.write_text(
+                json.dumps(payload, ensure_ascii=False, indent=2, sort_keys=True),
+                encoding="utf-8",
+            )
 
 
 def _to_jsonable(value: Any) -> Any:
@@ -49,7 +62,22 @@ def _catalog_from_dict(payload: dict[str, Any]) -> SymbolCatalog:
         id=payload["id"],
         as_of=datetime.fromisoformat(payload["as_of"]),
         source=payload["source"],
-        records=[SymbolRecord(**record) for record in payload["records"]],
+        records=[_record_from_dict(record) for record in payload["records"]],
         generated_at=datetime.fromisoformat(payload["generated_at"]),
+        metadata=payload.get("metadata", {}),
+    )
+
+
+def _record_from_dict(payload: dict[str, Any]) -> SymbolRecord:
+    return SymbolRecord(
+        symbol=payload["symbol"],
+        name=payload["name"],
+        market=payload["market"],
+        security_type=payload.get("security_type", "stock"),
+        korean_name=payload.get("korean_name", ""),
+        english_name=payload.get("english_name", ""),
+        normalized_name=payload.get("normalized_name", ""),
+        aliases=payload.get("aliases", []),
+        query_keywords=payload.get("query_keywords", []),
         metadata=payload.get("metadata", {}),
     )

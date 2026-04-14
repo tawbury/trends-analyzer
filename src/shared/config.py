@@ -42,6 +42,11 @@ class Settings:
     rules_version: str
     active_sources: list[str] | None = None
     source_symbols: list[str] | None = None
+    source_symbol_policy: str = "explicit"
+    source_symbol_markets: list[str] | None = None
+    source_symbol_classifications: list[str] | None = None
+    source_symbol_limit: int = 0
+    source_symbol_valid_code_only: bool = True
     source_timeout_seconds: float = 10
     source_partial_success: bool = True
     symbol_catalog_source: str = "kis_master"
@@ -73,6 +78,17 @@ class Settings:
             rules_version=os.getenv("RULES_VERSION", "rules-mvp-0.1"),
             active_sources=_csv_env("TRENDS_ACTIVE_SOURCES", ["fixture"]),
             source_symbols=_csv_env("TRENDS_SOURCE_SYMBOLS", ["005930", "000660"]),
+            source_symbol_policy=os.getenv("TRENDS_SOURCE_SYMBOL_POLICY", "explicit"),
+            source_symbol_markets=_csv_env(
+                "TRENDS_SOURCE_SYMBOL_MARKETS",
+                ["KOSPI", "KOSDAQ"],
+            ),
+            source_symbol_classifications=_csv_env(
+                "TRENDS_SOURCE_SYMBOL_CLASSIFICATIONS",
+                ["stock"],
+            ),
+            source_symbol_limit=int(os.getenv("TRENDS_SOURCE_SYMBOL_LIMIT", "0")),
+            source_symbol_valid_code_only=_bool_env("TRENDS_SOURCE_SYMBOL_VALID_CODE_ONLY", True),
             source_timeout_seconds=float(os.getenv("TRENDS_SOURCE_TIMEOUT_SECONDS", "10")),
             source_partial_success=_bool_env("TRENDS_SOURCE_PARTIAL_SUCCESS", True),
             symbol_catalog_source=os.getenv("TRENDS_SYMBOL_CATALOG_SOURCE", "kis_master"),

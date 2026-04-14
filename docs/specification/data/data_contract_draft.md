@@ -48,7 +48,11 @@ SymbolRecord:
 - `name`
 - `market`
 - `security_type`
+- `korean_name`
+- `english_name`
+- `normalized_name`
 - `aliases`
+- `query_keywords`
 - `metadata`
 
 SymbolCatalog:
@@ -59,6 +63,19 @@ SymbolCatalog:
 - `records`
 - `generated_at`
 - `metadata`
+
+SymbolCatalogValidationReport:
+
+- `catalog_id`
+- `generated_at`
+- `total_count`
+- `invalid_code_count`
+- `duplicate_symbol_count`
+- `duplicate_name_count`
+- `missing_name_count`
+- `market_distribution`
+- `classification_distribution`
+- `suspicious_records`
 
 주의:
 

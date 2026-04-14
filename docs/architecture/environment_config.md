@@ -149,6 +149,11 @@ Phase 1 실데이터 검증에서는 fixture, KIS, Kiwoom을 설정으로 조합
 |------|--------|------|
 | `TRENDS_ACTIVE_SOURCES` | `fixture` | 활성 소스 목록. 예: `fixture`, `kis`, `kiwoom`, `kis,kiwoom` |
 | `TRENDS_SOURCE_SYMBOLS` | `005930,000660` | KIS/Kiwoom 검증 대상 종목 코드 |
+| `TRENDS_SOURCE_SYMBOL_POLICY` | `explicit` | source 실행 종목 선택 정책. `explicit`, `catalog_all`, `catalog_filtered` |
+| `TRENDS_SOURCE_SYMBOL_MARKETS` | `KOSPI,KOSDAQ` | `catalog_filtered` 사용 시 포함할 시장 |
+| `TRENDS_SOURCE_SYMBOL_CLASSIFICATIONS` | `stock` | `catalog_filtered` 사용 시 포함할 분류. 예: `stock,preferred_stock,etf` |
+| `TRENDS_SOURCE_SYMBOL_LIMIT` | `0` | catalog 기반 선택 시 최대 종목 수. `0`은 제한 없음 |
+| `TRENDS_SOURCE_SYMBOL_VALID_CODE_ONLY` | `true` | KIS/Kiwoom source 실행용 선택에서 6자리 숫자 종목코드만 허용 |
 | `TRENDS_SOURCE_TIMEOUT_SECONDS` | `10` | provider HTTP 요청 timeout |
 | `TRENDS_SOURCE_PARTIAL_SUCCESS` | `true` | 일부 소스 실패 시 나머지 소스 결과로 분석 지속 |
 | `TRENDS_SYMBOL_CATALOG_SOURCE` | `kis_master` | symbol catalog 갱신 원천. `kis_master` 또는 임시 bridge용 `json_artifact` |
@@ -235,6 +240,11 @@ SOURCE_TIER_CONFIG_PATH=config/source_tiers.yaml
 
 TRENDS_ACTIVE_SOURCES=kis,kiwoom
 TRENDS_SOURCE_SYMBOLS=005930,000660
+TRENDS_SOURCE_SYMBOL_POLICY=explicit
+TRENDS_SOURCE_SYMBOL_MARKETS=KOSPI,KOSDAQ
+TRENDS_SOURCE_SYMBOL_CLASSIFICATIONS=stock
+TRENDS_SOURCE_SYMBOL_LIMIT=20
+TRENDS_SOURCE_SYMBOL_VALID_CODE_ONLY=true
 TRENDS_SOURCE_PARTIAL_SUCCESS=true
 TRENDS_SYMBOL_CATALOG_SOURCE=kis_master
 TRENDS_SYMBOL_CATALOG_MARKETS=KOSPI,KOSDAQ,KONEX

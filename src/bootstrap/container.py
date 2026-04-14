@@ -26,6 +26,7 @@ from src.db.repositories.jsonl import (
 from src.db.repositories.symbol_catalog_repository import JsonSymbolCatalogRepository
 from src.ingestion.catalog.json_artifact_loader import JsonArtifactSymbolCatalogSource
 from src.ingestion.catalog.kis_stock_code_source import KisStockCodeCatalogSource
+from src.ingestion.catalog.selection import SymbolSelectionPolicy, select_source_symbols
 from src.ingestion.clients.http import JsonHttpClient
 from src.ingestion.clients.kis_client import KisClient
 from src.ingestion.clients.kiwoom_client import KiwoomClient
@@ -56,9 +57,12 @@ def build_container(settings: Settings | None = None) -> Container:
     snapshot_repository = JsonlSnapshotRepository(data_dir / "snapshots.jsonl")
     qts_payload_repository = JsonlQtsPayloadRepository(data_dir / "qts_payloads.jsonl")
     idempotency_repository = JsonlIdempotencyRepository(data_dir / "idempotency.jsonl")
-    news_source = build_news_source(resolved_settings)
     symbol_catalog_repository = JsonSymbolCatalogRepository(
         directory=data_dir / "symbol_catalog",
+    )
+    news_source = build_news_source(
+        resolved_settings,
+        symbol_catalog_repository=symbol_catalog_repository,
     )
     symbol_catalog_source = build_symbol_catalog_source(resolved_settings)
 
@@ -87,9 +91,16 @@ def build_container(settings: Settings | None = None) -> Container:
     )
 
 
-def build_news_source(settings: Settings) -> NewsSourcePort:
+def build_news_source(
+    settings: Settings,
+    *,
+    symbol_catalog_repository: JsonSymbolCatalogRepository | None = None,
+) -> NewsSourcePort:
     active_sources = settings.active_sources or ["fixture"]
-    symbols = settings.source_symbols or ["005930", "000660"]
+    symbols = resolve_source_symbols(
+        settings,
+        symbol_catalog_repository=symbol_catalog_repository,
+    )
     http = JsonHttpClient(timeout_seconds=settings.source_timeout_seconds)
     sources = []
 
@@ -138,6 +149,27 @@ def build_news_source(settings: Settings) -> NewsSourcePort:
     return CompositeNewsSource(
         sources=sources,
         partial_success=settings.source_partial_success,
+    )
+
+
+def resolve_source_symbols(
+    settings: Settings,
+    *,
+    symbol_catalog_repository: JsonSymbolCatalogRepository | None = None,
+) -> list[str]:
+    catalog = None
+    if symbol_catalog_repository is not None:
+        catalog = symbol_catalog_repository.get_latest_sync()
+    return select_source_symbols(
+        policy=SymbolSelectionPolicy(
+            mode=settings.source_symbol_policy,
+            explicit_symbols=settings.source_symbols or ["005930", "000660"],
+            markets=settings.source_symbol_markets or [],
+            classifications=settings.source_symbol_classifications or [],
+            limit=settings.source_symbol_limit,
+            valid_code_only=settings.source_symbol_valid_code_only,
+        ),
+        catalog=catalog,
     )
 
 

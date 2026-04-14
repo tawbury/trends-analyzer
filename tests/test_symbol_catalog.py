@@ -9,6 +9,8 @@ from src.application.use_cases.refresh_symbol_catalog import RefreshSymbolCatalo
 from src.contracts.symbols import SymbolRecord
 from src.db.repositories.symbol_catalog_repository import JsonSymbolCatalogRepository
 from src.ingestion.catalog.json_artifact_loader import JsonArtifactSymbolCatalogSource
+from src.ingestion.catalog.lookup import SymbolCatalogLookup
+from src.ingestion.catalog.selection import SymbolSelectionPolicy, select_source_symbols
 from src.ingestion.catalog.symbol_catalog_builder import parse_kis_master_text, parse_stock_code_csv
 
 
@@ -34,15 +36,18 @@ class SymbolCatalogTest(unittest.IsolatedAsyncioTestCase):
         records = parse_stock_code_csv(content, allowed_markets={"KOSPI", "KOSDAQ"})
 
         self.assertEqual([record.symbol for record in records], ["000100", "005930", "950001"])
+        self.assertEqual(records[0].normalized_name, "LowPriceStock")
+        self.assertIn("Low Price Stock", records[0].query_keywords)
 
     def test_parse_kis_master_text_keeps_low_previous_close_symbols(self) -> None:
         tail = "ST000003500" + (" " * (184 - 11))
         content = "000100   KR7000100008Low Price Stock     " + tail
 
-        records = parse_kis_master_text(content, market="KOSPI")
+        records = parse_kis_master_text(content, market="KONEX")
 
         self.assertEqual([record.symbol for record in records], ["000100"])
         self.assertEqual(records[0].metadata["previous_close"], "000003500")
+        self.assertEqual(records[0].metadata["classification"], "stock")
 
     async def test_refresh_symbol_catalog_persists_latest_artifact(self) -> None:
         temp_dir = TemporaryDirectory()
@@ -61,6 +66,8 @@ class SymbolCatalogTest(unittest.IsolatedAsyncioTestCase):
         self.assertIsNotNone(latest)
         self.assertEqual(catalog.metadata["filter_policy"], "no_price_filter")
         self.assertEqual(latest.symbols, ["000100", "005930"])
+        validation_report = Path(temp_dir.name) / "latest_symbol_catalog_validation.json"
+        self.assertTrue(validation_report.exists())
 
     async def test_json_artifact_loader_reads_observer_shape(self) -> None:
         temp_dir = TemporaryDirectory()
@@ -77,6 +84,35 @@ class SymbolCatalogTest(unittest.IsolatedAsyncioTestCase):
         )
 
         self.assertEqual([record.symbol for record in records], ["000100", "005930"])
+
+    async def test_symbol_lookup_and_selection_use_normalized_aliases(self) -> None:
+        temp_dir = TemporaryDirectory()
+        self.addCleanup(temp_dir.cleanup)
+        repository = JsonSymbolCatalogRepository(directory=Path(temp_dir.name))
+        use_case = RefreshSymbolCatalogUseCase(
+            source=StaticSymbolCatalogSource(),
+            repository=repository,
+        )
+        catalog = await use_case.execute(
+            as_of=datetime.fromisoformat("2026-04-15T16:10:00+09:00")
+        )
+
+        lookup = SymbolCatalogLookup(catalog)
+        selected = select_source_symbols(
+            policy=SymbolSelectionPolicy(
+                mode="catalog_filtered",
+                explicit_symbols=[],
+                markets=["KOSPI"],
+                classifications=["stock"],
+                limit=1,
+                valid_code_only=True,
+            ),
+            catalog=catalog,
+        )
+
+        self.assertEqual(lookup.get_by_code("005930").name, "Samsung Electronics")
+        self.assertEqual([record.symbol for record in lookup.find_by_alias("LowPriceStock")], ["000100"])
+        self.assertEqual(selected, ["000100"])
 
 
 if __name__ == "__main__":

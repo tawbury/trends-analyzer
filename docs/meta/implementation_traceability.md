@@ -28,6 +28,7 @@
 | `docs/specification/data/data_contract_draft.md`의 Core Signal Model | `src/contracts/core.py` | `docs/specification/data/data_model_spec.md` |
 | `docs/specification/data/data_contract_draft.md`의 Consumer Payload Model | `src/contracts/payloads.py` | `docs/architecture/module_design.md` |
 | Symbol Catalog / Universe source | `src/contracts/symbols.py`, `src/ingestion/catalog/`, `src/application/use_cases/refresh_symbol_catalog.py` | `docs/specification/source/source_module_spec.md`, `docs/architecture/environment_config.md` |
+| Symbol quality / lookup / selection | `src/ingestion/catalog/validation.py`, `src/ingestion/catalog/normalization.py`, `src/ingestion/catalog/lookup.py`, `src/ingestion/catalog/selection.py` | `docs/specification/data/data_contract_draft.md`, `docs/architecture/environment_config.md` |
 | `docs/architecture/runtime_scheduling_policy.md`의 market-hours guard | `src/shared/market_hours.py`, `src/api/dependencies.py`, `src/batch/runner.py` | `docs/architecture/runtime_scheduling_policy.md` |
 | `docs/architecture/environment_config.md`의 env var groups | `src/shared/config.py` 또는 equivalent | `docs/architecture/environment_config.md` |
 | `docs/architecture/observability_ops.md`의 job/correlation tracking | `src/contracts/runtime.py`, `src/shared/logging.py`, `src/db/repositories/` | `docs/architecture/observability_ops.md` |
@@ -55,7 +56,7 @@ UseCase는 Core 알고리즘, Adapter mapping, HTTP validation을 직접 구현�
 | API transport DTO contracts | MVP: `src/contracts/api.py` | API request/response, `ErrorResponse`, pagination DTO |
 | API transport DTO 확장 | `src/contracts/api_requests.py`, `src/contracts/api_responses.py` | API DTO가 커질 때만 분리 |
 | Runtime/job contracts | `src/contracts/runtime.py` | `RuntimeMode`, `JobRequest`, `JobResult`, `CorrelationContext`, `DispatchResult` |
-| Symbol catalog contracts | `src/contracts/symbols.py` | `SymbolRecord`, `SymbolCatalog` |
+| Symbol catalog contracts | `src/contracts/symbols.py` | `SymbolRecord`, `SymbolCatalog`, `SymbolCatalogValidationReport` |
 | Port contracts | `src/contracts/ports.py` | repository/source/dispatch protocol |
 
 주의:

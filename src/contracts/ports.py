@@ -11,7 +11,7 @@ from src.contracts.core import (
 )
 from src.contracts.payloads import QTSInputPayload
 from src.contracts.runtime import AnalyzeDailyResult, CorrelationContext
-from src.contracts.symbols import SymbolCatalog, SymbolRecord
+from src.contracts.symbols import SymbolCatalog, SymbolCatalogValidationReport, SymbolRecord
 
 
 class NewsSourcePort(Protocol):
@@ -84,4 +84,7 @@ class SymbolCatalogRepository(Protocol):
         ...
 
     async def get_latest(self) -> SymbolCatalog | None:
+        ...
+
+    async def save_validation_report(self, report: SymbolCatalogValidationReport) -> None:
         ...

@@ -136,6 +136,8 @@ shared <- all layers
 
 - KIS official stock master MST ZIP 또는 임시 JSON artifact에서 symbol catalog 원천을 읽는다.
 - provider-specific 원천 포맷을 `SymbolRecord`로 정규화한다.
+- code/name/alias lookup과 source 실행용 symbol selection을 제공한다.
+- validation report를 생성해 종목 코드, 중복, 시장 분포, 분류 분포, 의심 record를 점검한다.
 - QTS/Observer universe의 전일종가 4000원 미만 제외 필터를 적용하지 않는다.
 - 전체 시장 catalog와 후속 news discovery 후보군 생성을 위한 입력을 제공한다.
 

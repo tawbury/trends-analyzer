@@ -4,6 +4,8 @@ from datetime import datetime
 
 from src.contracts.ports import SymbolCatalogRepository, SymbolCatalogSourcePort
 from src.contracts.symbols import SymbolCatalog
+from src.ingestion.catalog.normalization import enrich_symbol_record
+from src.ingestion.catalog.validation import validate_symbol_catalog
 
 
 class RefreshSymbolCatalogUseCase:
@@ -17,7 +19,8 @@ class RefreshSymbolCatalogUseCase:
         self.repository = repository
 
     async def execute(self, *, as_of: datetime) -> SymbolCatalog:
-        records = await self.source.fetch_symbols(as_of=as_of)
+        source_records = await self.source.fetch_symbols(as_of=as_of)
+        records = [enrich_symbol_record(record) for record in source_records]
         catalog = SymbolCatalog(
             id=f"symbol_catalog_{as_of:%Y%m%d_%H%M%S}",
             as_of=as_of,
@@ -30,4 +33,7 @@ class RefreshSymbolCatalogUseCase:
             },
         )
         await self.repository.save(catalog)
+        await self.repository.save_validation_report(
+            validate_symbol_catalog(catalog, generated_at=as_of)
+        )
         return catalog

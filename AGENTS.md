@@ -27,9 +27,9 @@
 | 항목 | 내용 |
 |------|------|
 | 작업 브랜치 | `main` |
-| 목표 | Observer universe 코드를 검토해 trends-analyzer 전용 symbol catalog 계층 구현 |
-| 최근 완료 | Observer universe 분석, KIS MST 기반 symbol catalog refresh 구현, 4440건 실데이터 artifact 검증 |
-| 완료 조건 | 충족: 4000원 필터 없이 독립 symbol catalog refresh 경로 구현 및 테스트/실행 검증 완료 |
+| 목표 | symbol catalog 품질 검증, alias/name 정규화, source symbol selection, lookup 계층 추가 |
+| 최근 완료 | symbol catalog validation report, alias/query keyword 정규화, lookup, catalog 기반 source symbol selection 구현 및 검증 |
+| 완료 조건 | 충족: catalog validation report 생성, normalized alias/query fields 저장, 설정 기반 active source symbol selection과 lookup 테스트 통과 |
 
 ## Code Consistency Rules
 
@@ -49,6 +49,7 @@
 | Workflow Payload | `src/adapters/workflow/` | neutral signal을 자동화/워크플로우 payload로 변환. n8n 인증, webhook, HTTP dispatch는 담당하지 않음 |
 | News Credibility | `src/core/credibility.py` | source tier, source_weight, evidence/corroboration, content quality, conflict penalty 기반 신뢰도 평가 |
 | Symbol Catalog | `src/ingestion/catalog/`, `src/contracts/symbols.py` | Observer/QTS universe의 가격 필터를 재사용하지 않고 전체 시장 심볼 카탈로그와 후보군 artifact를 관리 |
+| Symbol Quality | `src/ingestion/catalog/validation.py`, `src/ingestion/catalog/normalization.py` | 종목 코드/이름/시장/분류 품질 리포트와 alias/query keyword 정규화 규칙 관리 |
 
 ## Project Context
 
