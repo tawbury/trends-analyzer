@@ -9,6 +9,7 @@
 | `example_code_appendix.md` | 아키텍처 개념을 설명하는 짧은 Python 예시 |
 | `development_architecture.md` | 과거 개발용 통합 아키텍처 참조 |
 | `trend_intelligence_platform_draft_v_0.md` | 원본 기획 초안 참조 |
+| `source_extension_notes.md` | KIS/Kiwoom 이후 외부 소스 확장 후보와 추가 절차 참고 |
 
 ## 사용 기준
 

@@ -44,7 +44,10 @@ class AnalyzeDailyTrendsUseCase:
         assert_heavy_job_allowed(command.as_of, job_type=command.runtime_mode.value)
         log_with_context(logger, "analyze_daily_started", command.correlation)
 
-        raw_items = await self.news_source.fetch_daily(as_of=command.as_of)
+        raw_items = await self.news_source.fetch_daily(
+            as_of=command.as_of,
+            correlation=command.correlation,
+        )
         normalized_items = [self.normalizer.normalize(item) for item in raw_items]
         evaluations = [
             self.scorer.evaluate(item, evaluated_at=command.as_of)

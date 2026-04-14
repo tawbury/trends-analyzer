@@ -3,10 +3,17 @@ from __future__ import annotations
 from datetime import datetime, timedelta
 
 from src.contracts.core import RawNewsItem
+from src.contracts.runtime import CorrelationContext
 
 
 class LocalFixtureNewsSource:
-    async def fetch_daily(self, as_of: datetime) -> list[RawNewsItem]:
+    source_name = "fixture"
+
+    async def fetch_daily(
+        self,
+        as_of: datetime,
+        correlation: CorrelationContext | None = None,
+    ) -> list[RawNewsItem]:
         collected_at = as_of
         published_at = as_of.replace(hour=6, minute=30, second=0, microsecond=0)
         if published_at > as_of:

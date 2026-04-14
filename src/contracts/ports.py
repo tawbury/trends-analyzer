@@ -10,11 +10,15 @@ from src.contracts.core import (
     TrendSnapshot,
 )
 from src.contracts.payloads import QTSInputPayload
-from src.contracts.runtime import AnalyzeDailyResult
+from src.contracts.runtime import AnalyzeDailyResult, CorrelationContext
 
 
 class NewsSourcePort(Protocol):
-    async def fetch_daily(self, as_of: datetime) -> list[RawNewsItem]:
+    async def fetch_daily(
+        self,
+        as_of: datetime,
+        correlation: CorrelationContext | None = None,
+    ) -> list[RawNewsItem]:
         ...
 
 

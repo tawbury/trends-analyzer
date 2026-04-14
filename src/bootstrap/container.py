@@ -9,6 +9,7 @@ from src.adapters.qts.adapter import QtsAdapter
 from src.application.use_cases.analyze_daily_trends import AnalyzeDailyTrendsUseCase
 from src.contracts.ports import (
     IdempotencyRepository,
+    NewsSourcePort,
     QtsPayloadRepository,
     SnapshotRepository,
 )
@@ -21,6 +22,12 @@ from src.db.repositories.jsonl import (
     JsonlQtsPayloadRepository,
     JsonlSnapshotRepository,
 )
+from src.ingestion.clients.http import JsonHttpClient
+from src.ingestion.clients.kis_client import KisClient
+from src.ingestion.clients.kiwoom_client import KiwoomClient
+from src.ingestion.loaders.composite import CompositeNewsSource
+from src.ingestion.loaders.kis_loader import KisMarketDataSource
+from src.ingestion.loaders.kiwoom_loader import KiwoomStockInfoSource
 from src.ingestion.loaders.local_fixture_loader import LocalFixtureNewsSource
 from src.shared.config import Settings
 
@@ -31,6 +38,7 @@ class Container:
     snapshot_repository: SnapshotRepository
     qts_payload_repository: QtsPayloadRepository
     idempotency_repository: IdempotencyRepository
+    news_source: NewsSourcePort
     analyze_daily_use_case: AnalyzeDailyTrendsUseCase
 
 
@@ -43,9 +51,10 @@ def build_container(settings: Settings | None = None) -> Container:
     snapshot_repository = JsonlSnapshotRepository(data_dir / "snapshots.jsonl")
     qts_payload_repository = JsonlQtsPayloadRepository(data_dir / "qts_payloads.jsonl")
     idempotency_repository = JsonlIdempotencyRepository(data_dir / "idempotency.jsonl")
+    news_source = build_news_source(resolved_settings)
 
     use_case = AnalyzeDailyTrendsUseCase(
-        news_source=LocalFixtureNewsSource(),
+        news_source=news_source,
         normalizer=NewsNormalizer(),
         scorer=MockNewsScorer(),
         aggregator=TrendAggregator(),
@@ -59,7 +68,62 @@ def build_container(settings: Settings | None = None) -> Container:
         snapshot_repository=snapshot_repository,
         qts_payload_repository=qts_payload_repository,
         idempotency_repository=idempotency_repository,
+        news_source=news_source,
         analyze_daily_use_case=use_case,
+    )
+
+
+def build_news_source(settings: Settings) -> NewsSourcePort:
+    active_sources = settings.active_sources or ["fixture"]
+    symbols = settings.source_symbols or ["005930", "000660"]
+    http = JsonHttpClient(timeout_seconds=settings.source_timeout_seconds)
+    sources = []
+
+    for source_name in active_sources:
+        normalized = source_name.strip().lower()
+        if normalized == "fixture":
+            sources.append(LocalFixtureNewsSource())
+        elif normalized == "kis":
+            sources.append(
+                KisMarketDataSource(
+                    client=KisClient(
+                        base_url=settings.kis_base_url,
+                        app_key=settings.kis_app_key,
+                        app_secret=settings.kis_app_secret,
+                        market_division_code=settings.kis_market_division_code,
+                        quote_tr_id=settings.kis_tr_id_quote,
+                        invest_opinion_tr_id=settings.kis_tr_id_invest_opinion,
+                        http=http,
+                        token_cache_path=settings.data_dir / "kis_token.json",
+                    ),
+                    symbols=symbols,
+                    invest_opinion_lookback_days=settings.kis_invest_opinion_lookback_days,
+                    invest_opinion_limit_per_symbol=settings.kis_invest_opinion_limit_per_symbol,
+                )
+            )
+        elif normalized == "kiwoom":
+            sources.append(
+                KiwoomStockInfoSource(
+                    client=KiwoomClient(
+                        mode=settings.kiwoom_mode,
+                        base_url=settings.kiwoom_base_url,
+                        app_key=settings.kiwoom_app_key,
+                        app_secret=settings.kiwoom_app_secret,
+                        account_no=settings.kiwoom_account_no,
+                        account_product_code=settings.kiwoom_account_product_code,
+                        stock_info_path=settings.kiwoom_stock_info_path,
+                        http=http,
+                        token_cache_path=settings.data_dir / "kiwoom_token.json",
+                    ),
+                    symbols=symbols,
+                )
+            )
+        else:
+            raise ValueError(f"Unsupported source configured: {source_name}")
+
+    return CompositeNewsSource(
+        sources=sources,
+        partial_success=settings.source_partial_success,
     )
 
 

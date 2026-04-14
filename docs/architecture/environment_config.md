@@ -133,6 +133,7 @@ Scheduler는 Core/Adapter를 직접 호출하지 않는다. Scheduler는 Batch R
 | 변수 | 예시 | 설명 |
 |------|------|------|
 | `DATABASE_URL` | `postgresql+asyncpg://...` | 운영 DB 연결 |
+| `TRENDS_DATA_DIR` | `.local/trends-analyzer` | MVP JSONL 저장소 루트. API와 Batch가 같은 값을 사용해야 함 |
 | `JSONL_STORAGE_DIR` | `/var/lib/trends-analyzer/jsonl` | 임시/보조 JSONL 저장소 |
 | `SOURCE_TIER_CONFIG_PATH` | `config/source_tiers.yaml` | 뉴스 source tier 설정 파일 |
 | `RULES_VERSION` | `rules_2026_04_14` | 분석/스코어링 규칙 버전 |
@@ -140,7 +141,35 @@ Scheduler는 Core/Adapter를 직접 호출하지 않는다. Scheduler는 Batch R
 
 `SOURCE_TIER_CONFIG_PATH`는 뉴스 신뢰도 구현의 핵심 입력이다. 운영 중 변경 시 rules/config version을 함께 기록해야 한다.
 
-## 12. 예시 `.env.local`
+## 12. 외부 소스 연동 설정
+
+Phase 1 실데이터 검증에서는 fixture, KIS, Kiwoom을 설정으로 조합한다. Source Provider의 인증/HTTP 세부사항은 `src/ingestion/clients/`에 격리하고, loader는 provider 응답을 `RawNewsItem`으로 변환한다.
+
+| 변수 | 기본값 | 설명 |
+|------|--------|------|
+| `TRENDS_ACTIVE_SOURCES` | `fixture` | 활성 소스 목록. 예: `fixture`, `kis`, `kiwoom`, `kis,kiwoom` |
+| `TRENDS_SOURCE_SYMBOLS` | `005930,000660` | KIS/Kiwoom 검증 대상 종목 코드 |
+| `TRENDS_SOURCE_TIMEOUT_SECONDS` | `10` | provider HTTP 요청 timeout |
+| `TRENDS_SOURCE_PARTIAL_SUCCESS` | `true` | 일부 소스 실패 시 나머지 소스 결과로 분석 지속 |
+| `KIS_APP_KEY` | secret | KIS Open API app key |
+| `KIS_APP_SECRET` | secret | KIS Open API app secret |
+| `KIS_BASE_URL` | `https://openapi.koreainvestment.com:9443` | KIS 운영/모의투자 base URL |
+| `KIS_MARKET_DIVISION_CODE` | `J` | KIS 국내주식 시장 구분 코드 |
+| `KIS_TR_ID_QUOTE` | `FHKST01010100` | KIS 국내주식 현재가 조회 TR ID |
+| `KIS_TR_ID_INVEST_OPINION` | `FHKST663300C0` | KIS 국내주식 종목투자의견 조회 TR ID |
+| `KIS_INVEST_OPINION_LOOKBACK_DAYS` | `180` | 종목투자의견 조회 기간 |
+| `KIS_INVEST_OPINION_LIMIT_PER_SYMBOL` | `5` | 종목별 RawNewsItem 변환 최대 건수 |
+| `KIWOOM_APP_KEY` | secret | Kiwoom REST API app key |
+| `KIWOOM_APP_SECRET` | secret | Kiwoom REST API secret key |
+| `KIWOOM_MODE` | `KIWOOM_REAL` | Kiwoom 실행 모드. `KIWOOM_REAL`은 운영, `KIWOOM_MOCK`은 모의투자 |
+| `KIWOOM_APP_ACCOUNT_NO` | secret | Kiwoom 실계좌/모의계좌 번호. 토큰 발급에는 사용하지 않지만 계좌성 endpoint 검증에 필요 |
+| `KIWOOM_APP_ACNT_PRDT_CD` | secret | Kiwoom 계좌 상품 코드. 토큰 발급에는 사용하지 않지만 계좌성 endpoint 검증에 필요 |
+| `KIWOOM_BASE_URL` | `https://api.kiwoom.com` | Kiwoom 운영/모의투자 base URL |
+| `KIWOOM_STOCK_INFO_PATH` | `/api/dostk/stkinfo` | Kiwoom 주식기본정보 요청 path |
+
+KIS와 Kiwoom은 현재 Trend Core가 요구하는 완전한 뉴스 원천이 아니라 시세/종목 정보 성격이 강하다. KIS는 종목코드 기반 `invest-opinion` 응답을 우선 사용하고, 응답이 없으면 현재가 quote를 fallback으로 사용한다. 따라서 Phase 1에서는 “research/market-data-derived raw item”으로 `RawNewsItem`에 매핑하고 provider 원문은 `metadata.provider_payload`에 보존한다. 뉴스 본문이 없는 경우 투자 의견, 목표가, 가격, 등락률, 거래량을 조합해 `body` fallback을 만든다.
+
+## 13. 예시 `.env.local`
 
 ```text
 TRENDS_ENV=local
@@ -161,9 +190,13 @@ API_AUTH_MODE=local_dev_disabled
 API_IDEMPOTENCY_TTL_SECONDS=86400
 
 SOURCE_TIER_CONFIG_PATH=config/source_tiers.yaml
+
+TRENDS_ACTIVE_SOURCES=fixture
+TRENDS_SOURCE_SYMBOLS=005930,000660
+TRENDS_SOURCE_PARTIAL_SUCCESS=true
 ```
 
-## 13. 예시 `.env.oci`
+## 14. 예시 `.env.oci`
 
 ```text
 TRENDS_ENV=oci_single_server
@@ -193,9 +226,19 @@ N8N_INBOUND_AUTH_MODE=hmac
 N8N_SIGNATURE_HEADER=X-N8N-Signature
 
 SOURCE_TIER_CONFIG_PATH=config/source_tiers.yaml
+
+TRENDS_ACTIVE_SOURCES=kis,kiwoom
+TRENDS_SOURCE_SYMBOLS=005930,000660
+TRENDS_SOURCE_PARTIAL_SUCCESS=true
+KIS_BASE_URL=https://openapi.koreainvestment.com:9443
+KIS_TR_ID_INVEST_OPINION=FHKST663300C0
+KIS_INVEST_OPINION_LOOKBACK_DAYS=180
+KIS_INVEST_OPINION_LIMIT_PER_SYMBOL=5
+KIWOOM_MODE=KIWOOM_REAL
+KIWOOM_BASE_URL=https://api.kiwoom.com
 ```
 
-## 14. 구현 시 주의사항
+## 15. 구현 시 주의사항
 
 - 설정 로더는 `src/shared/config.py` 또는 equivalent에 둔다.
 - UseCase는 이미 파싱된 settings 객체를 주입받아야 하며, 환경 변수를 직접 읽지 않는다.
@@ -203,3 +246,4 @@ SOURCE_TIER_CONFIG_PATH=config/source_tiers.yaml
 - 장중 override는 MVP에서 비활성화한다.
 - OCI 단일 서버에서는 worker concurrency를 보수적으로 유지한다.
 - 로컬과 예비 노트북에서 통과한 설정 조합만 OCI에 반영한다.
+- KIS/Kiwoom provider 응답 필드는 Core contract로 직접 누수하지 않고 `RawNewsItem.metadata`에 보존한다.
