@@ -26,10 +26,10 @@
 
 | 항목 | 내용 |
 |------|------|
-| 작업 브랜치 | `not-a-git-repository` |
-| 목표 | 현재 폴더를 GitHub `trends-analyzer` 레포로 초기화하고 커밋/푸시 |
-| 최근 완료 | `docs/development_architecture.md` 작성 |
-| 완료 조건 | GitHub `trends-analyzer` 레포 생성, 초기 커밋 작성, 원격 `main` 브랜치 푸시 |
+| 작업 브랜치 | `main` |
+| 목표 | 뉴스 신뢰도 평가 설계 보강 및 별도 spec 문서 작성 |
+| 최근 완료 | `docs/spec/` 아래 API, source/module, data model, persistence, batch/runtime spec 문서 작성 |
+| 완료 조건 | `docs/development_architecture.md`와 `docs/spec/`에 뉴스 신뢰도 산정 기준, 저장 필드, 운영 검증 규칙 반영 |
 
 ## Code Consistency Rules
 
@@ -44,6 +44,7 @@
 | Contracts | `src/*/contracts.py` | RawNewsItem, NormalizedNewsItem, NewsEvaluation, MarketSignal, ThemeSignal, StockSignal, TrendSnapshot 등 타입 계약 |
 | Persistence | `src/db/` | PostgreSQL 우선. 초기 검증용 JSONL은 보조 저장소로만 사용 |
 | Workflow Payload | `src/adapters/workflow/` | n8n inbound/outbound 최소 시나리오부터 구현하고 자동화 라우팅 조건을 명시 |
+| News Credibility | `src/core/credibility.py` | source tier, source_weight, evidence/corroboration, content quality, conflict penalty 기반 신뢰도 평가 |
 
 ## Project Context
 

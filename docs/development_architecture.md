@@ -146,6 +146,7 @@ src/
 - RawNewsItem을 NormalizedNewsItem으로 정규화한다.
 - URL, 제목, 본문, source, 시각 기준으로 중복을 제거한다.
 - 관련성, 감성, 영향도, 신뢰도, novelty, urgency, actionability를 점수화한다.
+- 신뢰도는 source tier, source_weight, 원문 근거성, 다중 source corroboration, 내용 품질, 루머/추측성 penalty를 분리해 산정한다.
 - 테마, 섹터, 종목에 매핑한다.
 - MarketSignal, ThemeSignal, StockSignal, TrendSnapshot을 생성한다.
 
@@ -241,6 +242,31 @@ Core 금지사항:
 | `actionability_score` | 실제 후속 행동으로 연결 가능한 정도 |
 | `urgency_score` | 즉시성 또는 시간 민감도 |
 | `content_value_score` | 브리핑/리포트 소재 가치 |
+
+### 7.3 뉴스 신뢰도 평가
+
+`confidence_score`는 단일 LLM 판단값이 아니라 여러 신뢰도 구성 요소를 결합한 결과로 본다.
+
+구성 요소:
+
+- `source_tier`: KIS/Kiwoom/공식 공시/주요 언론/RSS/n8n 유입 등 source 등급
+- `source_weight`: source별 기본 가중치
+- `evidence_score`: 원문 링크, 인용, 수치, 공식 발표 등 근거 포함 정도
+- `corroboration_score`: 독립 source에서 동일 내용이 확인되는 정도
+- `content_quality_score`: 제목/본문 완성도, 과장 표현, 광고성/스팸성 여부
+- `conflict_penalty`: 기존 고신뢰 source와 충돌하거나 루머성 표현이 강할 때 감점
+- `freshness_score`: 분석 window 안에서 시의성이 유지되는 정도
+
+Core는 뉴스별 `NewsEvaluation`에 신뢰도 세부 breakdown을 보존하고, Adapter는 필요할 때 최종 `confidence_score`만 사용한다.
+
+신뢰도 평가 규칙:
+
+- source 등급과 내용 품질을 분리한다. 신뢰 source의 기사라도 내용이 빈약하면 낮은 confidence를 허용한다.
+- 단일 source 단독 보도는 `corroboration_score`를 낮게 둔다.
+- 공식 공시, 거래소, 기업 IR, 증권사 원문 자료는 높은 source tier 후보로 둔다.
+- n8n 유입 데이터는 upstream provenance가 확인되지 않으면 낮은 기본 source tier로 둔다.
+- 루머, 추측, 익명 커뮤니티성 문구는 `conflict_penalty` 또는 `rumor_penalty`를 적용한다.
+- QTS Adapter는 낮은 confidence signal을 risk override나 universe adjustment로 강하게 반영하지 않는다.
 
 ## 8. 저장소 설계
 
@@ -512,6 +538,7 @@ def assert_heavy_job_allowed(now: datetime, job_type: str) -> None:
 - batch job이 장중에 실행되지 않도록 scheduler와 runner 양쪽에서 보호되는가?
 - API endpoint가 read-only와 write/heavy로 구분되는가?
 - Adapter payload가 재생성 가능하도록 원본 snapshot과 연결되는가?
+- `confidence_score`가 source tier, evidence, corroboration, content quality, conflict penalty로 설명 가능한가?
 - n8n dispatch 결과가 별도 로그로 남는가?
 - 로컬 검증과 OCI 운영 설정이 분리되어 있는가?
 - QTS/Observer 리소스 보호 조건이 배포 설정에 반영되어 있는가?
