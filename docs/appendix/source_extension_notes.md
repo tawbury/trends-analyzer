@@ -11,11 +11,12 @@
 
 ## 2. 현재 Phase 1 범위
 
-현재 실데이터 검증 범위는 KIS와 Kiwoom으로 제한한다.
+현재 실데이터 검증 범위는 KIS, Kiwoom, Naver News query discovery로 제한한다.
 
 - KIS: 국내주식 종목투자의견 응답을 우선 `RawNewsItem`으로 변환하고, 응답이 없으면 현재가/시세 계열 응답을 fallback으로 변환한다.
 - Kiwoom: 국내주식 종목정보/시세 계열 TR 응답을 `RawNewsItem`으로 변환한다.
-- 두 provider 모두 완전한 뉴스 본문 제공자가 아니므로 `mapping_type`을 통해 research/market-data-derived item임을 명시한다.
+- Naver News: selected `SymbolRecord`의 name/alias/query keyword에서 검색 query를 생성하고 검색 결과를 `RawNewsItem`으로 변환한다.
+- KIS/Kiwoom은 완전한 뉴스 본문 제공자가 아니므로 `mapping_type`을 통해 research/market-data-derived item임을 명시한다.
 - provider 원문 응답은 `RawNewsItem.metadata.provider_payload`에 문자열 JSON으로 보존한다.
 
 이 방식은 Core가 provider-specific schema를 알지 못하게 유지하면서, 실데이터가 현재 MVP scoring/aggregation/QTS payload 흐름을 통과할 수 있는지 검증하기 위한 임시 연결이다.
@@ -26,7 +27,6 @@
 
 | 후보 | 예상 위치 | 구현 시 주의사항 |
 |------|-----------|------------------|
-| Naver News API 또는 검색 기반 대안 | `src/ingestion/clients/naver_client.py`, `src/ingestion/loaders/naver_news_loader.py` | title/body/url/published_at 품질과 검색어 정책을 먼저 정의해야 한다. |
 | Google News-compatible collection | `src/ingestion/clients/google_news_client.py`, `src/ingestion/loaders/google_news_loader.py` | 공식 API 부재/약관/수집 안정성을 별도로 검토해야 한다. |
 | RSS/feed ingestion | `src/ingestion/clients/rss_client.py`, `src/ingestion/loaders/rss_loader.py` | feed별 신뢰도 tier와 중복 제거 기준이 필요하다. |
 | 기타 금융/뉴스 API | provider별 client/loader 쌍 | provider 응답은 Core로 직접 전달하지 않고 `RawNewsItem`으로 정규화한다. |

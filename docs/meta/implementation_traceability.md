@@ -29,6 +29,7 @@
 | `docs/specification/data/data_contract_draft.md`의 Consumer Payload Model | `src/contracts/payloads.py` | `docs/architecture/module_design.md` |
 | Symbol Catalog / Universe source | `src/contracts/symbols.py`, `src/ingestion/catalog/`, `src/application/use_cases/refresh_symbol_catalog.py` | `docs/specification/source/source_module_spec.md`, `docs/architecture/environment_config.md` |
 | Symbol quality / lookup / selection | `src/ingestion/catalog/validation.py`, `src/ingestion/catalog/normalization.py`, `src/ingestion/catalog/lookup.py`, `src/ingestion/catalog/selection.py` | `docs/specification/data/data_contract_draft.md`, `docs/architecture/environment_config.md` |
+| Query news discovery | `src/ingestion/clients/naver_news_client.py`, `src/ingestion/loaders/naver_news_loader.py`, `src/ingestion/loaders/query_strategy.py` | `docs/specification/source/source_module_spec.md`, `docs/architecture/environment_config.md` |
 | Source execution reporting | `src/contracts/runtime.py`, `src/ingestion/loaders/`, `src/ingestion/loaders/composite.py` | `docs/specification/source/source_module_spec.md`, `docs/architecture/observability_ops.md` |
 | `docs/architecture/runtime_scheduling_policy.md`의 market-hours guard | `src/shared/market_hours.py`, `src/api/dependencies.py`, `src/batch/runner.py` | `docs/architecture/runtime_scheduling_policy.md` |
 | `docs/architecture/environment_config.md`의 env var groups | `src/shared/config.py` 또는 equivalent | `docs/architecture/environment_config.md` |

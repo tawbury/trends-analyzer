@@ -145,6 +145,9 @@ def _log_execution_report(
         "succeeded_symbol_count": str(report.succeeded_symbol_count),
         "failed_symbol_count": str(report.failed_symbol_count),
         "failed_symbol_sample": ",".join(report.failed_symbols[:5]),
+        "query_count": str(report.query_count),
+        "failed_query_count": str(report.failed_query_count),
+        "failed_query_sample": ",".join(report.failed_query_sample[:5]),
         "item_count": str(report.item_count),
         "partial_success": str(report.partial_success).lower(),
     }
@@ -154,7 +157,7 @@ def _log_execution_report(
         (
             "source_execution_report provider=%s requested_symbols=%s "
             "succeeded_symbols=%s failed_symbols=%s item_count=%s partial_success=%s "
-            "failed_symbol_sample=%s"
+            "query_count=%s failed_query_count=%s failed_symbol_sample=%s failed_query_sample=%s"
         ),
         report.provider,
         report.requested_symbol_count,
@@ -162,6 +165,9 @@ def _log_execution_report(
         report.failed_symbol_count,
         report.item_count,
         report.partial_success,
+        report.query_count,
+        report.failed_query_count,
         ",".join(report.failed_symbols[:5]),
+        ",".join(report.failed_query_sample[:5]),
         extra=fields,
     )

@@ -147,7 +147,7 @@ Phase 1 실데이터 검증에서는 fixture, KIS, Kiwoom을 설정으로 조합
 
 | 변수 | 기본값 | 설명 |
 |------|--------|------|
-| `TRENDS_ACTIVE_SOURCES` | `fixture` | 활성 소스 목록. 예: `fixture`, `kis`, `kiwoom`, `kis,kiwoom` |
+| `TRENDS_ACTIVE_SOURCES` | `fixture` | 활성 소스 목록. 예: `fixture`, `kis`, `kiwoom`, `naver_news`, `kis,kiwoom,naver_news` |
 | `TRENDS_SOURCE_SYMBOLS` | `005930,000660` | KIS/Kiwoom 검증 대상 종목 코드 |
 | `TRENDS_SOURCE_SYMBOL_POLICY` | `explicit` | source 실행 종목 선택 정책. `explicit`, `catalog_all`, `catalog_filtered` |
 | `TRENDS_SOURCE_SYMBOL_MARKETS` | `KOSPI,KOSDAQ` | `catalog_filtered` 사용 시 포함할 시장 |
@@ -175,12 +175,24 @@ Phase 1 실데이터 검증에서는 fixture, KIS, Kiwoom을 설정으로 조합
 | `KIWOOM_APP_ACNT_PRDT_CD` | secret | Kiwoom 계좌 상품 코드. 토큰 발급에는 사용하지 않지만 계좌성 endpoint 검증에 필요 |
 | `KIWOOM_BASE_URL` | `https://api.kiwoom.com` | Kiwoom 운영/모의투자 base URL |
 | `KIWOOM_STOCK_INFO_PATH` | `/api/dostk/stkinfo` | Kiwoom 주식기본정보 요청 path |
+| `NAVER_CLIENT_ID` | secret | Naver News Search API client id |
+| `NAVER_CLIENT_SECRET` | secret | Naver News Search API client secret |
+| `NAVER_NEWS_BASE_URL` | `https://openapi.naver.com` | Naver Open API base URL |
+| `TRENDS_NAVER_NEWS_ENABLED` | `false` | `naver_news` source 사용 허용 flag |
+| `TRENDS_NAVER_QUERY_LIMIT_PER_SYMBOL` | `2` | symbol당 query 최대 수 |
+| `TRENDS_NAVER_RESULT_LIMIT_PER_QUERY` | `5` | query당 결과 요청 수 |
+| `TRENDS_NAVER_INCLUDE_ALIASES` | `false` | alias를 query 후보에 포함할지 여부 |
+| `TRENDS_NAVER_INCLUDE_QUERY_KEYWORDS` | `true` | catalog query_keywords를 query 후보에 포함할지 여부 |
 
 KIS와 Kiwoom은 현재 Trend Core가 요구하는 완전한 뉴스 원천이 아니라 시세/종목 정보 성격이 강하다. KIS는 종목코드 기반 `invest-opinion` 응답을 우선 사용하고, 응답이 없으면 현재가 quote를 fallback으로 사용한다. 따라서 Phase 1에서는 “research/market-data-derived raw item”으로 `RawNewsItem`에 매핑하고 provider 원문은 `metadata.provider_payload`에 보존한다. 뉴스 본문이 없는 경우 투자 의견, 목표가, 가격, 등락률, 거래량을 조합해 `body` fallback을 만든다.
 
 Symbol catalog는 QTS/Observer의 universe snapshot을 직접 재사용하지 않는다. Observer universe는 전일종가 4000원 미만 제외 등 QTS 매매 유니버스 정책을 포함할 수 있으므로 뉴스/트렌드 분석용 전체 종목 catalog에는 부적합하다. trends-analyzer는 기본적으로 KIS official stock master MST ZIP을 독립 catalog 원천으로 사용하고, `json_artifact`는 운영 전환 전 임시 bridge로만 사용한다.
 
-`TRENDS_SOURCE_SYMBOL_POLICY`가 `catalog_all` 또는 `catalog_filtered`이면 runtime은 latest symbol catalog를 읽어 KIS/Kiwoom source 생성 시 사용할 symbol을 선택한다. 선택 결과는 `latest_source_symbol_selection.json`에 저장해 catalog id, 선택 정책, 선택 종목 수, invalid-code 제외 수, 선택 record의 name/alias/query keyword를 확인할 수 있게 한다.
+`TRENDS_SOURCE_SYMBOL_POLICY`가 `catalog_all` 또는 `catalog_filtered`이면 runtime은 latest symbol catalog를 읽어 KIS/Kiwoom/Naver News source 생성 시 사용할 symbol을 선택한다. 선택 결과는 `latest_source_symbol_selection.json`에 저장해 catalog id, 선택 정책, 선택 종목 수, invalid-code 제외 수, 선택 record의 name/alias/query keyword를 확인할 수 있게 한다.
+
+`TRENDS_SOURCE_SYMBOL_POLICY=explicit`에서도 latest catalog가 존재하면 explicit code 목록을 catalog record로 보강해 name, alias, query keyword를 유지한다. catalog에 없는 explicit code는 코드 자체를 name으로 사용하는 fallback record로 남긴다.
+
+Naver News source는 selected `SymbolRecord`의 `korean_name`, `normalized_name`, `aliases`, `query_keywords`에서 query를 생성한다. Google News/RSS는 아직 구현하지 않고, 이후 같은 query strategy 계층을 재사용해 확장한다.
 
 ## 13. 예시 `.env.local`
 
@@ -256,6 +268,11 @@ KIS_INVEST_OPINION_LOOKBACK_DAYS=180
 KIS_INVEST_OPINION_LIMIT_PER_SYMBOL=5
 KIWOOM_MODE=KIWOOM_REAL
 KIWOOM_BASE_URL=https://api.kiwoom.com
+TRENDS_NAVER_NEWS_ENABLED=false
+TRENDS_NAVER_QUERY_LIMIT_PER_SYMBOL=2
+TRENDS_NAVER_RESULT_LIMIT_PER_QUERY=5
+TRENDS_NAVER_INCLUDE_ALIASES=false
+TRENDS_NAVER_INCLUDE_QUERY_KEYWORDS=true
 ```
 
 ## 15. 구현 시 주의사항

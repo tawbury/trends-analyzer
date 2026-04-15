@@ -97,6 +97,10 @@ KIS/Kiwoom source 실행은 다음 이벤트를 남긴다.
 - `requested_symbol_count`
 - `succeeded_symbol_count`
 - `failed_symbol_count`
+- `failed_symbol_sample`
+- `query_count`
+- `failed_query_count`
+- `failed_query_sample`
 - `item_count`
 - `partial_success`
 

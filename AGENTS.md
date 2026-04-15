@@ -27,9 +27,9 @@
 | 항목 | 내용 |
 |------|------|
 | 작업 브랜치 | `main` |
-| 목표 | symbol selection 지표 의미 정제, provider 실패 로그 correlation 보강, selection artifact atomic write 적용 |
-| 최근 완료 | catalog 기반 source symbol selection artifact, provider source execution report, invalid-code exclusion observability 구현 |
-| 완료 조건 | catalog_invalid_code_count와 selection_invalid_code_excluded_count 분리, explicit/fallback 구분, correlation 포함 실패 로그와 atomic artifact write 검증 |
+| 목표 | `.env`에 등록된 Naver News API credential로 최소 응답 테스트 수행 |
+| 최근 완료 | Naver News 단일 query 인증/응답 shape 확인 및 loader `RawNewsItem` 정규화 smoke test 성공 |
+| 완료 조건 | 장중 보호 원칙을 지키기 위해 단일 query 수준의 lightweight 호출로 인증/응답 shape를 확인하고 결과를 기록 |
 
 ## Code Consistency Rules
 
@@ -51,6 +51,7 @@
 | Symbol Catalog | `src/ingestion/catalog/`, `src/contracts/symbols.py` | Observer/QTS universe의 가격 필터를 재사용하지 않고 전체 시장 심볼 카탈로그와 후보군 artifact를 관리 |
 | Symbol Quality | `src/ingestion/catalog/validation.py`, `src/ingestion/catalog/normalization.py` | 종목 코드/이름/시장/분류 품질 리포트와 alias/query keyword 정규화 규칙 관리 |
 | Source Execution Report | `src/contracts/runtime.py`, `src/ingestion/loaders/` | provider별 요청 종목 수, 성공/실패 종목 수, item count, partial success 상태를 기록 |
+| Query News Discovery | `src/ingestion/clients/naver_news_client.py`, `src/ingestion/loaders/naver_news_loader.py`, `src/ingestion/loaders/query_strategy.py` | selected symbol records의 name/alias/query keyword를 사용해 query 기반 뉴스 RawNewsItem 생성 |
 
 ## Project Context
 

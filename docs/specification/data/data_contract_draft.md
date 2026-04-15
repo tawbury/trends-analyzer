@@ -110,6 +110,9 @@ Provider source 실행 후 런타임 관측성을 위해 다음 값을 기록한
 - `item_count`
 - `partial_success`
 - `failed_symbols`
+- `query_count`
+- `failed_query_count`
+- `failed_query_sample`
 
 ### RawNewsItem
 

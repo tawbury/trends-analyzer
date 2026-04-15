@@ -66,7 +66,10 @@ def select_source_symbol_records(
 ) -> list[SymbolRecord]:
     mode = policy.mode.strip().lower()
     if mode == "explicit":
-        return _records_from_symbols(_limit(_unique(policy.explicit_symbols), policy.limit))
+        symbols = _limit(_unique(policy.explicit_symbols), policy.limit)
+        if catalog is not None:
+            return _records_from_catalog_symbols(symbols=symbols, catalog=catalog)
+        return _records_from_symbols(symbols)
     if catalog is None:
         return _records_from_symbols(_limit(_unique(policy.explicit_symbols), policy.limit))
     records = catalog.records
@@ -167,6 +170,18 @@ def _unique(symbols: list[str]) -> list[str]:
 def _records_from_symbols(symbols: list[str]) -> list[SymbolRecord]:
     return [
         SymbolRecord(symbol=symbol, name=symbol, market="UNKNOWN")
+        for symbol in symbols
+    ]
+
+
+def _records_from_catalog_symbols(
+    *,
+    symbols: list[str],
+    catalog: SymbolCatalog,
+) -> list[SymbolRecord]:
+    records_by_symbol = {record.symbol: record for record in catalog.records}
+    return [
+        records_by_symbol.get(symbol, SymbolRecord(symbol=symbol, name=symbol, market="UNKNOWN"))
         for symbol in symbols
     ]
 

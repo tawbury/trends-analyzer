@@ -190,6 +190,34 @@ class SymbolCatalogTest(unittest.IsolatedAsyncioTestCase):
         self.assertFalse(fallback_report.explicit_override_used)
         self.assertTrue(fallback_report.catalog_missing_fallback_used)
 
+    async def test_explicit_selection_hydrates_symbol_records_from_catalog(self) -> None:
+        temp_dir = TemporaryDirectory()
+        self.addCleanup(temp_dir.cleanup)
+        repository = JsonSymbolCatalogRepository(directory=Path(temp_dir.name))
+        use_case = RefreshSymbolCatalogUseCase(
+            source=StaticSymbolCatalogSource(),
+            repository=repository,
+        )
+        catalog = await use_case.execute(
+            as_of=datetime.fromisoformat("2026-04-15T16:10:00+09:00")
+        )
+
+        report = build_symbol_selection_report(
+            policy=SymbolSelectionPolicy(
+                mode="explicit",
+                explicit_symbols=["005930", "999999"],
+                markets=[],
+                classifications=[],
+            ),
+            catalog=catalog,
+            generated_at=datetime.fromisoformat("2026-04-15T16:20:00+09:00"),
+        )
+
+        self.assertEqual(report.selected_records[0].symbol, "005930")
+        self.assertEqual(report.selected_records[0].name, "Samsung Electronics")
+        self.assertEqual(report.selected_records[1].symbol, "999999")
+        self.assertEqual(report.selected_records[1].name, "999999")
+
     async def test_catalog_all_policy_ignores_market_filters(self) -> None:
         temp_dir = TemporaryDirectory()
         self.addCleanup(temp_dir.cleanup)

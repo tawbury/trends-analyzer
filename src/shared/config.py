@@ -68,6 +68,14 @@ class Settings:
     kiwoom_account_product_code: str = ""
     kiwoom_base_url: str = "https://api.kiwoom.com"
     kiwoom_stock_info_path: str = "/api/dostk/stkinfo"
+    naver_client_id: str = ""
+    naver_client_secret: str = ""
+    naver_news_base_url: str = "https://openapi.naver.com"
+    naver_news_enabled: bool = False
+    naver_query_limit_per_symbol: int = 2
+    naver_result_limit_per_query: int = 5
+    naver_include_aliases: bool = False
+    naver_include_query_keywords: bool = True
 
     @classmethod
     def from_env(cls) -> "Settings":
@@ -126,4 +134,22 @@ class Settings:
             kiwoom_account_product_code=os.getenv("KIWOOM_APP_ACNT_PRDT_CD", ""),
             kiwoom_base_url=_kiwoom_base_url(kiwoom_mode),
             kiwoom_stock_info_path=os.getenv("KIWOOM_STOCK_INFO_PATH", "/api/dostk/stkinfo"),
+            naver_client_id=os.getenv("NAVER_CLIENT_ID", ""),
+            naver_client_secret=os.getenv("NAVER_CLIENT_SECRET", ""),
+            naver_news_base_url=os.getenv(
+                "NAVER_NEWS_BASE_URL",
+                "https://openapi.naver.com",
+            ).rstrip("/"),
+            naver_news_enabled=_bool_env("TRENDS_NAVER_NEWS_ENABLED", False),
+            naver_query_limit_per_symbol=int(
+                os.getenv("TRENDS_NAVER_QUERY_LIMIT_PER_SYMBOL", "2")
+            ),
+            naver_result_limit_per_query=int(
+                os.getenv("TRENDS_NAVER_RESULT_LIMIT_PER_QUERY", "5")
+            ),
+            naver_include_aliases=_bool_env("TRENDS_NAVER_INCLUDE_ALIASES", False),
+            naver_include_query_keywords=_bool_env(
+                "TRENDS_NAVER_INCLUDE_QUERY_KEYWORDS",
+                True,
+            ),
         )

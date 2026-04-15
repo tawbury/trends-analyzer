@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import datetime
 from enum import StrEnum
 
@@ -45,3 +45,6 @@ class SourceExecutionReport:
     item_count: int
     partial_success: bool
     failed_symbols: list[str]
+    query_count: int = 0
+    failed_query_count: int = 0
+    failed_query_sample: list[str] = field(default_factory=list)

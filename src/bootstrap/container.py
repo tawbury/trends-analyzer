@@ -34,10 +34,12 @@ from src.ingestion.catalog.selection import (
 from src.ingestion.clients.http import JsonHttpClient
 from src.ingestion.clients.kis_client import KisClient
 from src.ingestion.clients.kiwoom_client import KiwoomClient
+from src.ingestion.clients.naver_news_client import NaverNewsClient
 from src.ingestion.loaders.composite import CompositeNewsSource
 from src.ingestion.loaders.kis_loader import KisMarketDataSource
 from src.ingestion.loaders.kiwoom_loader import KiwoomStockInfoSource
 from src.ingestion.loaders.local_fixture_loader import LocalFixtureNewsSource
+from src.ingestion.loaders.naver_news_loader import NaverNewsDiscoverySource
 from src.shared.clock import now_kst
 from src.shared.config import Settings
 
@@ -109,6 +111,7 @@ def build_news_source(
         symbol_catalog_repository=symbol_catalog_repository,
     )
     symbols = [record.symbol for record in selection_report.selected_records]
+    symbol_records = selection_report.selected_records
     if symbol_catalog_repository is not None:
         symbol_catalog_repository.save_selection_report_sync(selection_report)
     _log_symbol_selection(selection_report)
@@ -151,6 +154,26 @@ def build_news_source(
                     token_cache_path=settings.data_dir / "kiwoom_token.json",
                 ),
                 symbols=symbols,
+            )
+            setattr(source, "symbol_selection_report", selection_report)
+            sources.append(source)
+        elif normalized == "naver_news":
+            if not settings.naver_news_enabled:
+                raise ValueError(
+                    "TRENDS_NAVER_NEWS_ENABLED=true is required for naver_news source"
+                )
+            source = NaverNewsDiscoverySource(
+                client=NaverNewsClient(
+                    base_url=settings.naver_news_base_url,
+                    client_id=settings.naver_client_id,
+                    client_secret=settings.naver_client_secret,
+                    http=http,
+                ),
+                symbol_records=symbol_records,
+                query_limit_per_symbol=settings.naver_query_limit_per_symbol,
+                result_limit_per_query=settings.naver_result_limit_per_query,
+                include_aliases=settings.naver_include_aliases,
+                include_query_keywords=settings.naver_include_query_keywords,
             )
             setattr(source, "symbol_selection_report", selection_report)
             sources.append(source)

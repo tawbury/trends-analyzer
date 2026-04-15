@@ -139,6 +139,8 @@ shared <- all layers
 - code/name/alias lookup과 source 실행용 symbol selection을 제공한다.
 - validation report를 생성해 종목 코드, 중복, 시장 분포, 분류 분포, 의심 record를 점검한다.
 - selection report를 생성해 catalog id, 선택 정책, 선택 종목 수, invalid-code 제외 수를 운영에서 확인할 수 있게 한다.
+- Naver News 같은 query-based source는 selected `SymbolRecord`의 name/alias/query keyword를 query strategy 입력으로 사용한다.
+- `explicit` symbol selection도 latest catalog가 있으면 code만 전달하지 않고 catalog의 name/alias/query keyword가 포함된 `SymbolRecord`로 보강한다.
 - QTS/Observer universe의 전일종가 4000원 미만 제외 필터를 적용하지 않는다.
 - 전체 시장 catalog와 후속 news discovery 후보군 생성을 위한 입력을 제공한다.
 
@@ -158,6 +160,7 @@ shared <- all layers
 - 생성된 item 수
 - partial success 여부
 - 실패 symbol 목록
+- query 수와 실패 query sample
 
 이 리포트는 Core scoring 결과가 아니라 runtime/source 관측성 자료다.
 
