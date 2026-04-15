@@ -26,12 +26,16 @@ class HumanReviewTest(unittest.TestCase):
                 "note": "generic market headline",
                 "rule_feedback_tag": "alias_noise",
                 "reviewed_at": "2026-04-15T18:00:00+09:00",
+                "reviewer": "operator-a",
+                "session_tag": "calibration-20260415",
             }
         )
 
         self.assertEqual(feedback.item_ref, "abc123")
         self.assertEqual(feedback.human_label, "drop")
         self.assertEqual(feedback.rule_feedback_tag, "alias_noise")
+        self.assertEqual(feedback.reviewer, "operator-a")
+        self.assertEqual(feedback.session_tag, "calibration-20260415")
 
         with self.assertRaises(ValueError):
             human_review_feedback_from_dict({"item_ref": "abc123", "human_label": "maybe"})
@@ -88,7 +92,9 @@ class HumanReviewTest(unittest.TestCase):
         )
 
         self.assertEqual(report["reviewed_item_count"], 4)
+        self.assertEqual(report["resolved_reviewed_item_count"], 4)
         self.assertEqual(report["matched_item_count"], 3)
+        self.assertEqual(report["resolution_policy"], "latest_wins_by_item_ref")
         self.assertEqual(report["unmatched_item_refs"], ["missing"])
         self.assertEqual(report["agreement_count"], 1)
         self.assertEqual(report["disagreement_count"], 2)
@@ -102,21 +108,71 @@ class HumanReviewTest(unittest.TestCase):
             report["per_classification_disagreement_counts"]["etf"]["disagreement"],
             1,
         )
-        self.assertIn(
-            {
-                "type": "false_keep_attention",
-                "count": 1,
-                "message": "Automatic rules kept items that humans marked as drop",
-            },
-            report["calibration_assist"],
+        self.assertTrue(
+            any(
+                hint.get("type") == "false_keep_attention"
+                and hint.get("count") == 1
+                and "next_action" in hint
+                for hint in report["calibration_assist"]
+            )
         )
-        self.assertIn(
-            {
-                "type": "false_drop_attention",
-                "count": 1,
-                "message": "Automatic rules dropped items that humans marked as keep or weak_keep",
-            },
-            report["calibration_assist"],
+        self.assertTrue(
+            any(
+                hint.get("type") == "false_drop_attention"
+                and hint.get("count") == 1
+                and "next_action" in hint
+                for hint in report["calibration_assist"]
+            )
+        )
+
+    def test_human_review_report_uses_latest_feedback_per_item_ref(self) -> None:
+        review_item = _review_item(
+            query="삼전",
+            query_origin="alias",
+            classification="stock",
+            decision="keep",
+        )
+
+        report = build_human_review_report(
+            provider="naver_news",
+            generated_at=datetime.fromisoformat("2026-04-15T18:10:00+09:00"),
+            review_payload=_review_payload([review_item]),
+            feedback_items=[
+                HumanReviewFeedback(
+                    item_ref=review_item.review_item_id,
+                    human_label="keep",
+                    reviewed_at="2026-04-15T18:00:00+09:00",
+                    reviewer="operator-a",
+                    session_tag="first-pass",
+                ),
+                HumanReviewFeedback(
+                    item_ref=review_item.review_item_id,
+                    human_label="drop",
+                    rule_feedback_tag="alias_noise",
+                    reviewed_at="2026-04-15T18:05:00+09:00",
+                    reviewer="operator-b",
+                    session_tag="second-pass",
+                ),
+            ],
+        )
+
+        self.assertEqual(report["reviewed_item_count"], 2)
+        self.assertEqual(report["resolved_reviewed_item_count"], 1)
+        self.assertEqual(report["duplicate_feedback_count"], 1)
+        self.assertEqual(report["overwritten_item_ref_count"], 1)
+        self.assertEqual(report["overwritten_item_refs"], [review_item.review_item_id])
+        self.assertEqual(report["agreement_count"], 0)
+        self.assertEqual(report["disagreement_count"], 1)
+        self.assertEqual(report["error_counts"]["false_keep"], 1)
+        self.assertEqual(report["reviewer_counts"], {"operator-b": 1})
+        self.assertEqual(report["session_tag_counts"], {"second-pass": 1})
+        self.assertEqual(report["rule_feedback_tag_counts"], {"alias_noise": 1})
+        self.assertTrue(
+            any(
+                hint.get("next_action")
+                == "Inspect alias origin score adjustment, min_query_length, and noisy alias samples"
+                for hint in report["calibration_assist"]
+            )
         )
 
     def test_repository_appends_feedback_and_saves_report(self) -> None:

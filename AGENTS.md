@@ -27,9 +27,9 @@
 | 항목 | 내용 |
 |------|------|
 | 작업 브랜치 | `main` |
-| 목표 | discovery review artifact에 대한 lightweight human review feedback 및 auto-vs-human calibration report 구현 |
-| 최근 완료 | discovery human review feedback JSONL, auto-vs-human disagreement report, calibration assist summary를 구현하고 `python3 -m pytest` 37개 테스트 통과 |
-| 완료 조건 | 수동 human_label feedback을 file-based로 기록하고 자동 discovery_decision 대비 disagreement/origin/classification/tuning hint summary가 생성 가능 |
+| 목표 | human review feedback loop의 CLI 운영성, latest-wins 해석 정책, reviewer/session metadata 지원 구현 |
+| 최근 완료 | human review append/report CLI, latest-wins feedback resolution, reviewer/session metadata, next_action calibration hints를 구현하고 `python3 -m pytest` 39개 테스트 통과 |
+| 완료 조건 | feedback append/report CLI가 제공되고 중복 item_ref는 report에서 latest-wins로 해석되며 reviewer/session metadata와 실무 tuning next action hint가 보존됨 |
 
 ## Code Consistency Rules
 
@@ -56,6 +56,7 @@
 | Discovery Rule Config | `src/ingestion/discovery/rules.py` | discovery 평가 threshold, noise terms, origin bonus/penalty, classification override를 JSON config 또는 기본값으로 관리 |
 | Discovery Experiments | `src/ingestion/discovery/experiment.py`, `src/ingestion/discovery/calibration_compare.py` | rule config fingerprint와 source selection metadata를 review artifact에 기록하고 latest run 대비 decision/origin/classification/noisy query 변화를 JSON comparison artifact로 관리 |
 | Discovery Human Review | `src/ingestion/discovery/human_review.py`, `src/db/repositories/discovery_human_review_repository.py` | review item stable id 기반 수동 human_label feedback을 JSONL로 기록하고 auto-vs-human disagreement 및 tuning attention summary를 file-based report로 관리 |
+| Discovery Human Review CLI | `src/batch/human_review_append.py`, `src/batch/human_review_report.py` | local discovery review artifact와 feedback JSONL을 대상으로 수동 feedback append, latest-wins report 생성, compact summary 출력을 수행 |
 
 ## Project Context
 

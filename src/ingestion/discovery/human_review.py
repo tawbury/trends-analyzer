@@ -16,6 +16,8 @@ class HumanReviewFeedback:
     note: str = ""
     rule_feedback_tag: str = ""
     reviewed_at: str = ""
+    reviewer: str = ""
+    session_tag: str = ""
 
 
 def human_review_feedback_from_dict(payload: dict[str, Any]) -> HumanReviewFeedback:
@@ -34,6 +36,8 @@ def human_review_feedback_from_dict(payload: dict[str, Any]) -> HumanReviewFeedb
         note=str(payload.get("note") or ""),
         rule_feedback_tag=str(payload.get("rule_feedback_tag") or ""),
         reviewed_at=reviewed_at,
+        reviewer=str(payload.get("reviewer") or ""),
+        session_tag=str(payload.get("session_tag") or ""),
     )
 
 
@@ -49,10 +53,11 @@ def build_human_review_report(
     feedback_items: list[HumanReviewFeedback],
 ) -> dict[str, Any]:
     review_items = _review_items_by_ref(review_payload)
+    resolved_feedback, duplicate_stats = resolve_latest_feedback(feedback_items)
     matched: list[tuple[dict[str, Any], HumanReviewFeedback]] = []
     unmatched_feedback: list[str] = []
 
-    for feedback in feedback_items:
+    for feedback in resolved_feedback:
         item = review_items.get(feedback.item_ref)
         if item is None:
             unmatched_feedback.append(feedback.item_ref)
@@ -66,6 +71,8 @@ def build_human_review_report(
     error_counts = {"false_keep": 0, "false_drop": 0, "weak_mismatch": 0}
     query_disagreements: dict[str, int] = {}
     tag_counts: dict[str, int] = {}
+    reviewer_counts: dict[str, int] = {}
+    session_tag_counts: dict[str, int] = {}
 
     for item, feedback in matched:
         automatic_label = str(item.get("discovery_decision") or "drop")
@@ -86,6 +93,12 @@ def build_human_review_report(
                     tag_counts.get(feedback.rule_feedback_tag, 0) + 1
                 )
 
+        if feedback.reviewer:
+            reviewer_counts[feedback.reviewer] = reviewer_counts.get(feedback.reviewer, 0) + 1
+        if feedback.session_tag:
+            session_tag_counts[feedback.session_tag] = (
+                session_tag_counts.get(feedback.session_tag, 0) + 1
+            )
         _record_group(per_origin, origin, agreed=agreed)
         _record_group(per_classification, classification, agreed=agreed)
 
@@ -94,8 +107,13 @@ def build_human_review_report(
         "generated_at": generated_at.isoformat(),
         "review_artifact_generated_at": review_payload.get("generated_at", ""),
         "reviewed_item_count": len(feedback_items),
+        "resolved_reviewed_item_count": len(resolved_feedback),
         "matched_item_count": len(matched),
         "unmatched_item_refs": unmatched_feedback[:20],
+        "resolution_policy": "latest_wins_by_item_ref",
+        "duplicate_feedback_count": duplicate_stats["duplicate_feedback_count"],
+        "overwritten_item_ref_count": duplicate_stats["overwritten_item_ref_count"],
+        "overwritten_item_refs": duplicate_stats["overwritten_item_refs"],
         "agreement_count": agreement_count,
         "disagreement_count": disagreement_count,
         "agreement_rate": _rate(agreement_count, len(matched)),
@@ -103,6 +121,8 @@ def build_human_review_report(
         "per_classification_disagreement_counts": _finalize_group_counts(per_classification),
         "error_counts": error_counts,
         "rule_feedback_tag_counts": dict(sorted(tag_counts.items())),
+        "reviewer_counts": dict(sorted(reviewer_counts.items())),
+        "session_tag_counts": dict(sorted(session_tag_counts.items())),
         "repeated_query_disagreements": _top_counts(query_disagreements),
         "calibration_assist": build_calibration_assist(
             per_origin=per_origin,
@@ -112,6 +132,25 @@ def build_human_review_report(
             tag_counts=tag_counts,
         ),
     }
+
+
+def resolve_latest_feedback(
+    feedback_items: list[HumanReviewFeedback],
+) -> tuple[list[HumanReviewFeedback], dict[str, Any]]:
+    latest_by_ref: dict[str, HumanReviewFeedback] = {}
+    duplicate_refs: set[str] = set()
+    for feedback in feedback_items:
+        if feedback.item_ref in latest_by_ref:
+            duplicate_refs.add(feedback.item_ref)
+        latest_by_ref[feedback.item_ref] = feedback
+    return (
+        list(latest_by_ref.values()),
+        {
+            "duplicate_feedback_count": len(feedback_items) - len(latest_by_ref),
+            "overwritten_item_ref_count": len(duplicate_refs),
+            "overwritten_item_refs": sorted(duplicate_refs)[:20],
+        },
+    )
 
 
 def build_calibration_assist(
@@ -145,6 +184,7 @@ def build_calibration_assist(
                 "type": "false_keep_attention",
                 "count": error_counts["false_keep"],
                 "message": "Automatic rules kept items that humans marked as drop",
+                "next_action": "Inspect stricter keep threshold, origin penalty, and noisy query terms",
             }
         )
     if error_counts.get("false_drop", 0) > 0:
@@ -153,6 +193,7 @@ def build_calibration_assist(
                 "type": "false_drop_attention",
                 "count": error_counts["false_drop"],
                 "message": "Automatic rules dropped items that humans marked as keep or weak_keep",
+                "next_action": "Inspect weak_keep threshold, classification override, and exact/token match scoring",
             }
         )
     for query, count in _top_counts(query_disagreements, limit=5):
@@ -163,6 +204,7 @@ def build_calibration_assist(
                     "query": query,
                     "count": count,
                     "message": "Query repeatedly disagreed with human labels",
+                    "next_action": "Inspect whether this query should be removed, penalized, or split into a more specific keyword",
                 }
             )
     for tag, count in sorted(tag_counts.items(), key=lambda item: (-item[1], item[0]))[:5]:
@@ -172,6 +214,7 @@ def build_calibration_assist(
                 "tag": tag,
                 "count": count,
                 "message": "Reviewer supplied repeated tuning feedback tag",
+                "next_action": "Group examples with this tag before changing discovery rules",
             }
         )
     return hints
@@ -242,6 +285,7 @@ def _append_group_hint(
                 "reviewed": total,
                 "disagreement_rate": disagreement_rate,
                 "message": message,
+                "next_action": _next_action_for_group(scope=scope, key=key),
             }
         )
 
@@ -254,3 +298,13 @@ def _rate(numerator: int, denominator: int) -> float:
 
 def _top_counts(counts: dict[str, int], *, limit: int = 10) -> list[tuple[str, int]]:
     return sorted(counts.items(), key=lambda item: (-item[1], item[0]))[:limit]
+
+
+def _next_action_for_group(*, scope: str, key: str) -> str:
+    if scope == "origin" and key == "alias":
+        return "Inspect alias origin score adjustment, min_query_length, and noisy alias samples"
+    if scope == "origin" and key == "query_keyword":
+        return "Inspect query_keyword score adjustment, min_token_count, and repeated noisy query keywords"
+    if scope == "classification" and key.lower() in {"etf", "etn", "spac"}:
+        return f"Inspect {key} classification keep and weak_keep threshold overrides"
+    return f"Inspect {scope}={key} examples before changing discovery rules"
