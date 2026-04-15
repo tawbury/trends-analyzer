@@ -77,6 +77,7 @@ class Settings:
     naver_include_aliases: bool = False
     naver_include_query_keywords: bool = True
     discovery_review_enabled: bool = True
+    discovery_rule_config_path: str = ""
 
     @classmethod
     def from_env(cls) -> "Settings":
@@ -154,4 +155,5 @@ class Settings:
                 True,
             ),
             discovery_review_enabled=_bool_env("TRENDS_DISCOVERY_REVIEW_ENABLED", True),
+            discovery_rule_config_path=os.getenv("TRENDS_DISCOVERY_RULE_CONFIG_PATH", ""),
         )

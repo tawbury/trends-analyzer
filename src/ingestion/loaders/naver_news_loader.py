@@ -14,6 +14,7 @@ from src.db.repositories.discovery_review_repository import JsonDiscoveryReviewR
 from src.ingestion.clients.naver_news_client import NaverNewsClient
 from src.ingestion.discovery.calibration import build_calibration_summary
 from src.ingestion.discovery.filtering import DiscoveryCandidate, filter_discovery_candidates
+from src.ingestion.discovery.rules import DiscoveryRuleConfig
 from src.ingestion.loaders.provider_mapping import provider_metadata
 from src.ingestion.loaders.query_strategy import build_symbol_news_query_specs
 from src.shared.logging import correlation_fields
@@ -36,6 +37,7 @@ class NaverNewsDiscoverySource:
         include_aliases: bool,
         include_query_keywords: bool,
         review_repository: JsonDiscoveryReviewRepository | None = None,
+        discovery_rules: DiscoveryRuleConfig | None = None,
     ) -> None:
         self.client = client
         self.symbol_records = symbol_records
@@ -44,6 +46,7 @@ class NaverNewsDiscoverySource:
         self.include_aliases = include_aliases
         self.include_query_keywords = include_query_keywords
         self.review_repository = review_repository
+        self.discovery_rules = discovery_rules or DiscoveryRuleConfig()
         self.last_execution_report = SourceExecutionReport(
             provider=self.source_name,
             requested_symbol_count=len(symbol_records),
@@ -104,7 +107,11 @@ class NaverNewsDiscoverySource:
             elif queries:
                 failed_symbols.add(record.symbol)
 
-        filter_result = filter_discovery_candidates(candidates=candidates, as_of=as_of)
+        filter_result = filter_discovery_candidates(
+            candidates=candidates,
+            as_of=as_of,
+            rules=self.discovery_rules,
+        )
         items = filter_result.items
         metrics = filter_result.metrics
         calibration_summary = build_calibration_summary(filter_result.review_items)

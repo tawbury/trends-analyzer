@@ -1,0 +1,47 @@
+{
+  "generic_noise_terms": [
+    "증시",
+    "코스피",
+    "코스닥",
+    "특징주",
+    "관련주",
+    "상승",
+    "하락",
+    "급등",
+    "급락",
+    "마감"
+  ],
+  "keep_threshold": 0.65,
+  "weak_keep_threshold": 0.4,
+  "publish_past_window_days": 30,
+  "publish_future_window_minutes": 10,
+  "origin_rules": {
+    "alias": {
+      "score_adjustment": 0.0,
+      "min_query_length": 2,
+      "min_token_count": 0
+    },
+    "query_keyword": {
+      "score_adjustment": 0.0,
+      "min_query_length": 0,
+      "min_token_count": 1
+    }
+  },
+  "classification_rules": {
+    "etf": {
+      "keep_threshold": 0.75,
+      "weak_keep_threshold": 0.45,
+      "score_adjustment": -0.05
+    },
+    "etn": {
+      "keep_threshold": 0.75,
+      "weak_keep_threshold": 0.45,
+      "score_adjustment": -0.05
+    },
+    "spac": {
+      "keep_threshold": 0.75,
+      "weak_keep_threshold": 0.45,
+      "score_adjustment": -0.05
+    }
+  }
+}

@@ -36,6 +36,7 @@ from src.ingestion.clients.http import JsonHttpClient
 from src.ingestion.clients.kis_client import KisClient
 from src.ingestion.clients.kiwoom_client import KiwoomClient
 from src.ingestion.clients.naver_news_client import NaverNewsClient
+from src.ingestion.discovery.rules import load_discovery_rule_config
 from src.ingestion.loaders.composite import CompositeNewsSource
 from src.ingestion.loaders.kis_loader import KisMarketDataSource
 from src.ingestion.loaders.kiwoom_loader import KiwoomStockInfoSource
@@ -122,6 +123,7 @@ def build_news_source(
         if settings.discovery_review_enabled
         else None
     )
+    discovery_rules = load_discovery_rule_config(settings.discovery_rule_config_path)
     sources = []
 
     for source_name in active_sources:
@@ -181,6 +183,7 @@ def build_news_source(
                 include_aliases=settings.naver_include_aliases,
                 include_query_keywords=settings.naver_include_query_keywords,
                 review_repository=discovery_review_repository,
+                discovery_rules=discovery_rules,
             )
             setattr(source, "symbol_selection_report", selection_report)
             sources.append(source)

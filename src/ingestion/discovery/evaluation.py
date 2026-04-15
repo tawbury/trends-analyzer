@@ -7,6 +7,7 @@ from enum import StrEnum
 
 from src.contracts.core import RawNewsItem
 from src.contracts.symbols import SymbolRecord
+from src.ingestion.discovery.rules import DiscoveryRuleConfig
 
 
 class DiscoveryDecision(StrEnum):
@@ -24,18 +25,6 @@ class DiscoveryEvaluation:
 
 
 _TOKEN_RE = re.compile(r"[^\w가-힣]+")
-_GENERIC_NOISE_TERMS = {
-    "증시",
-    "코스피",
-    "코스닥",
-    "특징주",
-    "관련주",
-    "상승",
-    "하락",
-    "급등",
-    "급락",
-    "마감",
-}
 
 
 def evaluate_discovery_item(
@@ -43,21 +32,26 @@ def evaluate_discovery_item(
     item: RawNewsItem,
     record: SymbolRecord,
     query: str,
+    query_origin: str = "",
     as_of: datetime,
+    rules: DiscoveryRuleConfig | None = None,
 ) -> DiscoveryEvaluation:
+    resolved_rules = rules or DiscoveryRuleConfig()
     text = f"{item.title} {item.body}".lower()
     reasons: list[str] = []
     score = 0.0
     suspicious = False
+    classification = _classification(record)
+    origin_rule = resolved_rules.origin_rule_for(query_origin)
 
     if item.title.strip():
-        score += 0.2
+        score += resolved_rules.title_present_score
         reasons.append("title_present")
     else:
         reasons.append("missing_title")
 
     if item.body.strip():
-        score += 0.15
+        score += resolved_rules.body_present_score
         reasons.append("body_present")
     else:
         reasons.append("missing_body")
@@ -66,45 +60,60 @@ def evaluate_discovery_item(
         text=text,
         record=record,
         query=query,
+        rules=resolved_rules,
     )
     score += match_strength
-    if match_strength >= 0.45:
+    if match_strength >= resolved_rules.strong_match_threshold:
         reasons.append("strong_symbol_or_query_match")
-    elif match_strength >= 0.2:
+    elif match_strength >= resolved_rules.weak_match_threshold:
         reasons.append("weak_symbol_or_query_match")
     else:
         reasons.append("missing_symbol_or_query_match")
         suspicious = True
 
     if item.url.strip():
-        score += 0.1
+        score += resolved_rules.url_present_score
         reasons.append("url_present")
     else:
         reasons.append("missing_url")
         suspicious = True
 
     if item.metadata.get("provider_payload"):
-        score += 0.05
+        score += resolved_rules.provider_payload_score
         reasons.append("provider_payload_present")
     else:
         reasons.append("missing_provider_payload")
 
-    if _is_publish_time_plausible(item.published_at, as_of):
-        score += 0.1
+    if _is_publish_time_plausible(item.published_at, as_of, rules=resolved_rules):
+        score += resolved_rules.publish_time_score
         reasons.append("publish_time_plausible")
     else:
         reasons.append("publish_time_suspicious")
         suspicious = True
 
-    if _is_generic_noise(item=item, record=record, query=query):
-        score -= 0.25
+    if _is_origin_query_too_weak(query=query, origin_rule=origin_rule):
+        score += origin_rule.score_adjustment
+        reasons.append(f"origin_{query_origin or 'unknown'}_query_too_weak")
+        suspicious = True
+    elif origin_rule.score_adjustment:
+        score += origin_rule.score_adjustment
+        reasons.append(f"origin_{query_origin}_score_adjustment")
+
+    classification_adjustment = resolved_rules.classification_score_adjustment(classification)
+    if classification_adjustment:
+        score += classification_adjustment
+        reasons.append(f"classification_{classification}_score_adjustment")
+
+    if _is_generic_noise(item=item, record=record, query=query, rules=resolved_rules):
+        score += resolved_rules.generic_noise_penalty
         reasons.append("generic_noise_pattern")
         suspicious = True
 
     score = max(0.0, min(score, 1.0))
-    if score >= 0.65 and not suspicious:
+    keep_threshold, weak_keep_threshold = resolved_rules.thresholds_for(classification)
+    if score >= keep_threshold and not suspicious:
         decision = DiscoveryDecision.KEEP
-    elif score >= 0.4:
+    elif score >= weak_keep_threshold:
         decision = DiscoveryDecision.WEAK_KEEP
     else:
         decision = DiscoveryDecision.DROP
@@ -139,6 +148,7 @@ def _match_strength(
     text: str,
     record: SymbolRecord,
     query: str,
+    rules: DiscoveryRuleConfig,
 ) -> float:
     names = _unique_non_empty(
         [
@@ -150,17 +160,26 @@ def _match_strength(
         ]
     )
     if any(name.lower() in text for name in names):
-        return 0.45
+        return rules.exact_match_score
 
     query_tokens = _tokens(query)
     if not query_tokens:
         return 0.0
     matched = sum(1 for token in query_tokens if token in text)
-    return 0.3 * (matched / len(query_tokens))
+    return rules.token_overlap_score * (matched / len(query_tokens))
 
 
-def _is_publish_time_plausible(published_at: datetime, as_of: datetime) -> bool:
-    return as_of - timedelta(days=30) <= published_at <= as_of + timedelta(minutes=10)
+def _is_publish_time_plausible(
+    published_at: datetime,
+    as_of: datetime,
+    *,
+    rules: DiscoveryRuleConfig,
+) -> bool:
+    return (
+        as_of - timedelta(days=rules.publish_past_window_days)
+        <= published_at
+        <= as_of + timedelta(minutes=rules.publish_future_window_minutes)
+    )
 
 
 def _is_generic_noise(
@@ -168,13 +187,26 @@ def _is_generic_noise(
     item: RawNewsItem,
     record: SymbolRecord,
     query: str,
+    rules: DiscoveryRuleConfig,
 ) -> bool:
     title_tokens = set(_tokens(item.title))
     text = f"{item.title} {item.body}".lower()
-    has_generic_title = bool(title_tokens & _GENERIC_NOISE_TERMS)
+    has_generic_title = bool(title_tokens & rules.generic_noise_terms)
     names = _unique_non_empty([record.korean_name, record.name, record.normalized_name, query])
     has_name_match = any(name.lower() in text for name in names)
     return has_generic_title and not has_name_match
+
+
+def _is_origin_query_too_weak(*, query: str, origin_rule) -> bool:
+    if origin_rule.min_query_length and len(query.strip()) < origin_rule.min_query_length:
+        return True
+    if origin_rule.min_token_count and len(_tokens(query)) < origin_rule.min_token_count:
+        return True
+    return False
+
+
+def _classification(record: SymbolRecord) -> str:
+    return record.metadata.get("classification") or record.security_type or "unknown"
 
 
 def _tokens(value: str) -> list[str]:

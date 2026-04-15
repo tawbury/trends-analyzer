@@ -129,6 +129,36 @@ Provider source 실행 후 런타임 관측성을 위해 다음 값을 기록한
 
 Query 기반 discovery source는 Core 진입 전에 rule-based 품질 평가를 수행할 수 있다. 평가 결과는 `RawNewsItem.metadata`에 `query_origin`, `classification`, `discovery_decision`, `discovery_score`, `discovery_reasons`, `discovery_suspicious`로 보존한다. 이 값은 Core signal contract가 아니라 source/discovery 관측성 metadata다.
 
+### Discovery Rule Config
+
+Discovery 평가 rule은 기본값을 코드에 보유하되, `TRENDS_DISCOVERY_RULE_CONFIG_PATH`로 지정한 JSON 파일에서 override할 수 있다.
+
+- `generic_noise_terms`
+- `keep_threshold`
+- `weak_keep_threshold`
+- `strong_match_threshold`
+- `weak_match_threshold`
+- `publish_past_window_days`
+- `publish_future_window_minutes`
+- `title_present_score`
+- `body_present_score`
+- `url_present_score`
+- `provider_payload_score`
+- `publish_time_score`
+- `exact_match_score`
+- `token_overlap_score`
+- `generic_noise_penalty`
+- `origin_rules`
+  - `score_adjustment`
+  - `min_query_length`
+  - `min_token_count`
+- `classification_rules`
+  - `keep_threshold`
+  - `weak_keep_threshold`
+  - `score_adjustment`
+
+기본 예시는 `config/discovery_rules.example.json`에 둔다. 이 config는 Core signal contract가 아니라 source discovery tuning contract다.
+
 ### Discovery Review Artifact
 
 Naver News 같은 query 기반 discovery source는 review/calibration artifact를 저장할 수 있다.

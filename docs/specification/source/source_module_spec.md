@@ -179,6 +179,16 @@ shared <- all layers
 
 이 artifact는 규칙 보정을 위한 검토 자료이며 Core evaluation이나 QTS payload contract가 아니다.
 
+### 4.6.3 Discovery rule config
+
+`src/ingestion/discovery/rules.py`는 discovery 평가 rule 기본값과 JSON override 로더를 제공한다.
+
+- 기본 rule은 기존 runtime 동작을 유지한다.
+- `TRENDS_DISCOVERY_RULE_CONFIG_PATH`가 지정되면 해당 JSON 파일로 rule 일부를 override한다.
+- 조정 대상은 generic noise terms, keep/weak_keep threshold, publish time window, origin별 score adjustment/minimum query rule, classification별 threshold/score adjustment다.
+- `alias`, `query_keyword`, `normalized_name` 등 query origin별 보정을 Core가 아니라 discovery 계층에서 처리한다.
+- `stock`, `preferred_stock`, `etf`, `etn`, `reit`, `spac` 같은 classification별 보정도 discovery 계층에서 처리한다.
+
 ### 4.0.1 `src/application/use_cases/`
 
 책임:

@@ -12,6 +12,7 @@ from src.ingestion.discovery.evaluation import (
 )
 from src.ingestion.discovery.metrics import DiscoveryQualityMetrics
 from src.ingestion.discovery.review import DiscoveryReviewItem, build_review_item
+from src.ingestion.discovery.rules import DiscoveryRuleConfig
 
 
 @dataclass(frozen=True)
@@ -34,7 +35,9 @@ def filter_discovery_candidates(
     *,
     candidates: list[DiscoveryCandidate],
     as_of: datetime,
+    rules: DiscoveryRuleConfig | None = None,
 ) -> DiscoveryFilterResult:
+    resolved_rules = rules or DiscoveryRuleConfig()
     metrics = DiscoveryQualityMetrics()
     seen_keys: set[str] = set()
     kept_items: list[RawNewsItem] = []
@@ -49,7 +52,9 @@ def filter_discovery_candidates(
             item=candidate.item,
             record=candidate.record,
             query=candidate.query,
+            query_origin=candidate.query_origin,
             as_of=as_of,
+            rules=resolved_rules,
         )
         metrics.record_evaluation(
             query=candidate.query,
