@@ -76,6 +76,7 @@ class Settings:
     naver_result_limit_per_query: int = 5
     naver_include_aliases: bool = False
     naver_include_query_keywords: bool = True
+    discovery_review_enabled: bool = True
 
     @classmethod
     def from_env(cls) -> "Settings":
@@ -152,4 +153,5 @@ class Settings:
                 "TRENDS_NAVER_INCLUDE_QUERY_KEYWORDS",
                 True,
             ),
+            discovery_review_enabled=_bool_env("TRENDS_DISCOVERY_REVIEW_ENABLED", True),
         )

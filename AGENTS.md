@@ -27,9 +27,9 @@
 | 항목 | 내용 |
 |------|------|
 | 작업 브랜치 | `main` |
-| 목표 | Naver News query discovery 결과에 대한 pre-core 품질 평가 및 후보 필터링 구현 |
-| 최근 완료 | discovery quality evaluation/filtering/metrics를 Naver News runtime에 연결하고 `python3 -m pytest` 22개 테스트 통과 |
-| 완료 조건 | keep/weak_keep/drop 평가 결과와 raw/deduplicated/kept/dropped/query/symbol 품질 지표를 source execution report에 기록 |
+| 목표 | Naver News discovery quality 보정을 위한 review/calibration artifact 생성 구현 |
+| 최근 완료 | query origin/classification별 review artifact와 calibration summary를 저장하도록 구현하고 `python3 -m pytest` 26개 테스트 통과 |
+| 완료 조건 | Naver discovery 실행 후 latest review artifact가 생성되고 per-query/per-symbol/per-classification 보정 지표를 확인 가능 |
 
 ## Code Consistency Rules
 
@@ -52,7 +52,7 @@
 | Symbol Quality | `src/ingestion/catalog/validation.py`, `src/ingestion/catalog/normalization.py` | 종목 코드/이름/시장/분류 품질 리포트와 alias/query keyword 정규화 규칙 관리 |
 | Source Execution Report | `src/contracts/runtime.py`, `src/ingestion/loaders/` | provider별 요청 종목 수, 성공/실패 종목 수, item count, partial success 상태를 기록 |
 | Query News Discovery | `src/ingestion/clients/naver_news_client.py`, `src/ingestion/loaders/naver_news_loader.py`, `src/ingestion/loaders/query_strategy.py` | selected symbol records의 name/alias/query keyword를 사용해 query 기반 뉴스 RawNewsItem 생성 |
-| Discovery Quality | `src/ingestion/discovery/` | query 기반 discovery 결과를 Core 진입 전 rule-based 평가/필터링하고 keep/weak_keep/drop 및 query/symbol 품질 지표를 기록 |
+| Discovery Quality | `src/ingestion/discovery/`, `src/db/repositories/discovery_review_repository.py` | query 기반 discovery 결과를 Core 진입 전 rule-based 평가/필터링하고 keep/weak_keep/drop, query origin, classification, review/calibration artifact를 기록 |
 
 ## Project Context
 

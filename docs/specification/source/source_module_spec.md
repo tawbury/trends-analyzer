@@ -163,9 +163,21 @@ shared <- all layers
 - 실패 symbol 목록
 - query 수와 실패 query sample
 - raw/deduplicated/kept/weak_keep/dropped/suspicious discovery item 수
-- high-yield query sample과 noisy query sample
+- high-yield query/symbol/classification sample과 noisy query/alias/keyword sample
+- ambiguous symbol sample
 
 이 리포트는 Core scoring 결과가 아니라 runtime/source 관측성 자료다.
+
+### 4.6.2 Discovery review artifact
+
+`src/ingestion/discovery/`는 query 기반 discovery 결과를 review/calibration artifact로 저장할 수 있다.
+
+- 저장 위치: `TRENDS_DATA_DIR/discovery_reviews/`
+- latest 파일: `latest_naver_news_review.json`
+- 포함 정보: symbol, query, query origin, title, url, published_at, discovery decision/score/reasons, suspicious flag, classification
+- calibration summary: per-query/per-symbol/per-classification decision count, noisy alias/keyword sample, ambiguous symbol sample
+
+이 artifact는 규칙 보정을 위한 검토 자료이며 Core evaluation이나 QTS payload contract가 아니다.
 
 ### 4.0.1 `src/application/use_cases/`
 

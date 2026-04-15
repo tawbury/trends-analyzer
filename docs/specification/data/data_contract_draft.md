@@ -121,9 +121,39 @@ Provider source 실행 후 런타임 관측성을 위해 다음 값을 기록한
 - `suspicious_item_count`
 - `top_query_yield_sample`
 - `top_symbol_yield_sample`
+- `top_classification_yield_sample`
 - `noisy_query_sample`
+- `noisy_alias_sample`
+- `noisy_keyword_sample`
+- `ambiguous_symbol_sample`
 
-Query 기반 discovery source는 Core 진입 전에 rule-based 품질 평가를 수행할 수 있다. 평가 결과는 `RawNewsItem.metadata`에 `discovery_decision`, `discovery_score`, `discovery_reasons`, `discovery_suspicious`로 보존한다. 이 값은 Core signal contract가 아니라 source/discovery 관측성 metadata다.
+Query 기반 discovery source는 Core 진입 전에 rule-based 품질 평가를 수행할 수 있다. 평가 결과는 `RawNewsItem.metadata`에 `query_origin`, `classification`, `discovery_decision`, `discovery_score`, `discovery_reasons`, `discovery_suspicious`로 보존한다. 이 값은 Core signal contract가 아니라 source/discovery 관측성 metadata다.
+
+### Discovery Review Artifact
+
+Naver News 같은 query 기반 discovery source는 review/calibration artifact를 저장할 수 있다.
+
+- `provider`
+- `generated_at`
+- `items`
+  - `symbol`
+  - `query`
+  - `query_origin`
+  - `title`
+  - `url`
+  - `published_at`
+  - `discovery_decision`
+  - `discovery_score`
+  - `discovery_reasons`
+  - `discovery_suspicious`
+  - `classification`
+- `calibration_summary`
+  - `per_query`
+  - `per_symbol`
+  - `per_classification`
+  - `noisy_alias_sample`
+  - `noisy_keyword_sample`
+  - `ambiguous_symbol_sample`
 
 ### RawNewsItem
 

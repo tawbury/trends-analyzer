@@ -2,12 +2,18 @@ from __future__ import annotations
 
 import unittest
 from datetime import datetime
+from pathlib import Path
+from tempfile import TemporaryDirectory
 
 from src.contracts.symbols import SymbolRecord
+from src.db.repositories.discovery_review_repository import JsonDiscoveryReviewRepository
 from src.ingestion.clients.http import ProviderClientError
 from src.ingestion.clients.naver_news_client import NaverNewsClient
 from src.ingestion.loaders.naver_news_loader import NaverNewsDiscoverySource
-from src.ingestion.loaders.query_strategy import build_symbol_news_queries
+from src.ingestion.loaders.query_strategy import (
+    build_symbol_news_queries,
+    build_symbol_news_query_specs,
+)
 
 
 class FakeNaverNewsClient:
@@ -80,7 +86,36 @@ class NaverNewsLoaderTest(unittest.IsolatedAsyncioTestCase):
 
         self.assertEqual(queries, ["삼성전자", "삼전", "삼성전자 반도체"])
 
+    def test_query_strategy_tracks_query_origin(self) -> None:
+        record = SymbolRecord(
+            symbol="005930",
+            name="삼성전자",
+            market="KOSPI",
+            korean_name="삼성전자",
+            normalized_name="삼성전자",
+            aliases=["삼전"],
+            query_keywords=["삼성전자 반도체"],
+        )
+
+        queries = build_symbol_news_query_specs(
+            record,
+            include_aliases=True,
+            include_query_keywords=True,
+            limit=3,
+        )
+
+        self.assertEqual(
+            [(query.query, query.origin) for query in queries],
+            [
+                ("삼성전자", "korean_name"),
+                ("삼전", "alias"),
+                ("삼성전자 반도체", "query_keyword"),
+            ],
+        )
+
     async def test_naver_news_loader_maps_results_to_raw_news_items(self) -> None:
+        temp_dir = TemporaryDirectory()
+        self.addCleanup(temp_dir.cleanup)
         client = FakeNaverNewsClient()
         source = NaverNewsDiscoverySource(
             client=client,
@@ -97,6 +132,7 @@ class NaverNewsLoaderTest(unittest.IsolatedAsyncioTestCase):
             result_limit_per_query=5,
             include_aliases=False,
             include_query_keywords=False,
+            review_repository=JsonDiscoveryReviewRepository(directory=Path(temp_dir.name)),
         )
 
         items = await source.fetch_daily(
@@ -113,6 +149,8 @@ class NaverNewsLoaderTest(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(source.last_execution_report.deduplicated_item_count, 1)
         self.assertEqual(source.last_execution_report.kept_item_count, 1)
         self.assertEqual(items[0].metadata["discovery_decision"], "keep")
+        self.assertEqual(items[0].metadata["query_origin"], "korean_name")
+        self.assertTrue((Path(temp_dir.name) / "latest_naver_news_review.json").exists())
 
     async def test_naver_news_loader_reports_failed_queries(self) -> None:
         source = NaverNewsDiscoverySource(

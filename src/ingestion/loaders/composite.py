@@ -156,7 +156,13 @@ def _log_execution_report(
         "suspicious_item_count": str(report.suspicious_item_count),
         "top_query_yield_sample": ",".join(report.top_query_yield_sample[:5]),
         "top_symbol_yield_sample": ",".join(report.top_symbol_yield_sample[:5]),
+        "top_classification_yield_sample": ",".join(
+            report.top_classification_yield_sample[:5]
+        ),
         "noisy_query_sample": ",".join(report.noisy_query_sample[:5]),
+        "noisy_alias_sample": ",".join(report.noisy_alias_sample[:5]),
+        "noisy_keyword_sample": ",".join(report.noisy_keyword_sample[:5]),
+        "ambiguous_symbol_sample": ",".join(report.ambiguous_symbol_sample[:5]),
         "item_count": str(report.item_count),
         "partial_success": str(report.partial_success).lower(),
     }
@@ -169,7 +175,8 @@ def _log_execution_report(
             "query_count=%s failed_query_count=%s raw_discovered=%s deduplicated=%s "
             "kept=%s weak_keep=%s dropped=%s suspicious=%s "
             "failed_symbol_sample=%s failed_query_sample=%s top_query_yield=%s "
-            "top_symbol_yield=%s noisy_query_sample=%s"
+            "top_symbol_yield=%s top_classification_yield=%s noisy_query_sample=%s "
+            "noisy_alias_sample=%s noisy_keyword_sample=%s ambiguous_symbol_sample=%s"
         ),
         report.provider,
         report.requested_symbol_count,
@@ -189,6 +196,10 @@ def _log_execution_report(
         ",".join(report.failed_query_sample[:5]),
         ",".join(report.top_query_yield_sample[:5]),
         ",".join(report.top_symbol_yield_sample[:5]),
+        ",".join(report.top_classification_yield_sample[:5]),
         ",".join(report.noisy_query_sample[:5]),
+        ",".join(report.noisy_alias_sample[:5]),
+        ",".join(report.noisy_keyword_sample[:5]),
+        ",".join(report.ambiguous_symbol_sample[:5]),
         extra=fields,
     )

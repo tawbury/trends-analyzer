@@ -11,6 +11,7 @@ from src.ingestion.discovery.evaluation import (
     evaluate_discovery_item,
 )
 from src.ingestion.discovery.metrics import DiscoveryQualityMetrics
+from src.ingestion.discovery.review import DiscoveryReviewItem, build_review_item
 
 
 @dataclass(frozen=True)
@@ -18,6 +19,7 @@ class DiscoveryCandidate:
     item: RawNewsItem
     record: SymbolRecord
     query: str
+    query_origin: str
     dedup_key: str
 
 
@@ -25,6 +27,7 @@ class DiscoveryCandidate:
 class DiscoveryFilterResult:
     items: list[RawNewsItem]
     metrics: DiscoveryQualityMetrics
+    review_items: list[DiscoveryReviewItem]
 
 
 def filter_discovery_candidates(
@@ -35,6 +38,7 @@ def filter_discovery_candidates(
     metrics = DiscoveryQualityMetrics()
     seen_keys: set[str] = set()
     kept_items: list[RawNewsItem] = []
+    review_items: list[DiscoveryReviewItem] = []
 
     for candidate in candidates:
         metrics.record_raw(query=candidate.query)
@@ -50,7 +54,15 @@ def filter_discovery_candidates(
         metrics.record_evaluation(
             query=candidate.query,
             symbol=candidate.record.symbol,
+            classification=_classification(candidate.record),
+            query_origin=candidate.query_origin,
             evaluation=evaluation,
+        )
+        review_items.append(
+            build_review_item(
+                candidate=candidate,
+                evaluation=evaluation,
+            )
         )
         if evaluation.decision == DiscoveryDecision.DROP:
             continue
@@ -61,4 +73,12 @@ def filter_discovery_candidates(
             )
         )
 
-    return DiscoveryFilterResult(items=kept_items, metrics=metrics)
+    return DiscoveryFilterResult(
+        items=kept_items,
+        metrics=metrics,
+        review_items=review_items,
+    )
+
+
+def _classification(record: SymbolRecord) -> str:
+    return record.metadata.get("classification") or record.security_type or "unknown"

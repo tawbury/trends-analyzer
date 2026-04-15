@@ -10,10 +10,12 @@ from typing import Any
 from src.contracts.core import RawNewsItem
 from src.contracts.runtime import CorrelationContext, SourceExecutionReport
 from src.contracts.symbols import SymbolRecord
+from src.db.repositories.discovery_review_repository import JsonDiscoveryReviewRepository
 from src.ingestion.clients.naver_news_client import NaverNewsClient
+from src.ingestion.discovery.calibration import build_calibration_summary
 from src.ingestion.discovery.filtering import DiscoveryCandidate, filter_discovery_candidates
 from src.ingestion.loaders.provider_mapping import provider_metadata
-from src.ingestion.loaders.query_strategy import build_symbol_news_queries
+from src.ingestion.loaders.query_strategy import build_symbol_news_query_specs
 from src.shared.logging import correlation_fields
 
 logger = logging.getLogger(__name__)
@@ -33,6 +35,7 @@ class NaverNewsDiscoverySource:
         result_limit_per_query: int,
         include_aliases: bool,
         include_query_keywords: bool,
+        review_repository: JsonDiscoveryReviewRepository | None = None,
     ) -> None:
         self.client = client
         self.symbol_records = symbol_records
@@ -40,6 +43,7 @@ class NaverNewsDiscoverySource:
         self.result_limit_per_query = result_limit_per_query
         self.include_aliases = include_aliases
         self.include_query_keywords = include_query_keywords
+        self.review_repository = review_repository
         self.last_execution_report = SourceExecutionReport(
             provider=self.source_name,
             requested_symbol_count=len(symbol_records),
@@ -62,26 +66,26 @@ class NaverNewsDiscoverySource:
         query_count = 0
 
         for record in self.symbol_records:
-            queries = build_symbol_news_queries(
+            queries = build_symbol_news_query_specs(
                 record,
                 include_aliases=self.include_aliases,
                 include_query_keywords=self.include_query_keywords,
                 limit=self.query_limit_per_symbol,
             )
             symbol_had_success = False
-            for query in queries:
+            for query_spec in queries:
                 query_count += 1
                 try:
                     response = self.client.search_news(
-                        query=query,
+                        query=query_spec.query,
                         display=self.result_limit_per_query,
                     )
                 except Exception as exc:
-                    failed_queries.append(query)
+                    failed_queries.append(query_spec.query)
                     _log_query_failure(
                         provider=self.source_name,
                         symbol=record.symbol,
-                        query=query,
+                        query=query_spec.query,
                         error=str(exc),
                         correlation=correlation,
                     )
@@ -90,7 +94,8 @@ class NaverNewsDiscoverySource:
                 symbol_candidates = _map_response_items(
                     response=response,
                     record=record,
-                    query=query,
+                    query=query_spec.query,
+                    query_origin=query_spec.origin,
                     as_of=as_of,
                 )
                 candidates.extend(symbol_candidates)
@@ -102,6 +107,14 @@ class NaverNewsDiscoverySource:
         filter_result = filter_discovery_candidates(candidates=candidates, as_of=as_of)
         items = filter_result.items
         metrics = filter_result.metrics
+        calibration_summary = build_calibration_summary(filter_result.review_items)
+        if self.review_repository is not None:
+            self.review_repository.save_review_sync(
+                provider=self.source_name,
+                generated_at=as_of,
+                review_items=filter_result.review_items,
+                calibration_summary=calibration_summary,
+            )
         self.last_execution_report = SourceExecutionReport(
             provider=self.source_name,
             requested_symbol_count=len(self.symbol_records),
@@ -121,7 +134,11 @@ class NaverNewsDiscoverySource:
             suspicious_item_count=metrics.suspicious_item_count,
             top_query_yield_sample=metrics.top_query_yield_sample(),
             top_symbol_yield_sample=metrics.top_symbol_yield_sample(),
+            top_classification_yield_sample=metrics.top_classification_yield_sample(),
             noisy_query_sample=metrics.noisy_query_sample,
+            noisy_alias_sample=metrics.noisy_alias_sample,
+            noisy_keyword_sample=metrics.noisy_keyword_sample,
+            ambiguous_symbol_sample=calibration_summary.ambiguous_symbol_sample,
         )
         if failed_symbols and not succeeded_symbols and not items:
             raise RuntimeError("Naver News source failed for all requested symbols")
@@ -133,6 +150,7 @@ def _map_response_items(
     response: dict[str, Any],
     record: SymbolRecord,
     query: str,
+    query_origin: str,
     as_of: datetime,
 ) -> list[DiscoveryCandidate]:
     raw_items = response.get("items", [])
@@ -163,7 +181,11 @@ def _map_response_items(
             metadata={
                 **provider_metadata("naver_news", item),
                 "query": query,
+                "query_origin": query_origin,
                 "symbol_name": record.name,
+                "classification": record.metadata.get("classification")
+                or record.security_type
+                or "unknown",
                 "mapping_type": "naver_news_search_result",
             },
         )
@@ -172,6 +194,7 @@ def _map_response_items(
                 item=raw_item,
                 record=record,
                 query=query,
+                query_origin=query_origin,
                 dedup_key=dedup_key,
             )
         )

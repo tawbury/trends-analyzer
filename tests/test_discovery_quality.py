@@ -65,6 +65,7 @@ class DiscoveryQualityTest(unittest.TestCase):
                 ),
                 record=self.record,
                 query="삼성전자",
+                query_origin="korean_name",
                 dedup_key="https://example.com/a",
             ),
             DiscoveryCandidate(
@@ -76,6 +77,7 @@ class DiscoveryQualityTest(unittest.TestCase):
                 ),
                 record=self.record,
                 query="삼성전자",
+                query_origin="korean_name",
                 dedup_key="https://example.com/a",
             ),
             DiscoveryCandidate(
@@ -87,6 +89,7 @@ class DiscoveryQualityTest(unittest.TestCase):
                 ),
                 record=self.record,
                 query="삼성전자",
+                query_origin="korean_name",
                 dedup_key="https://example.com/noise",
             ),
         ]

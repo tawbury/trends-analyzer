@@ -56,4 +56,8 @@ class SourceExecutionReport:
     suspicious_item_count: int = 0
     top_query_yield_sample: list[str] = field(default_factory=list)
     top_symbol_yield_sample: list[str] = field(default_factory=list)
+    top_classification_yield_sample: list[str] = field(default_factory=list)
     noisy_query_sample: list[str] = field(default_factory=list)
+    noisy_alias_sample: list[str] = field(default_factory=list)
+    noisy_keyword_sample: list[str] = field(default_factory=list)
+    ambiguous_symbol_sample: list[str] = field(default_factory=list)

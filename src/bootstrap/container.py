@@ -24,6 +24,7 @@ from src.db.repositories.jsonl import (
     JsonlQtsPayloadRepository,
     JsonlSnapshotRepository,
 )
+from src.db.repositories.discovery_review_repository import JsonDiscoveryReviewRepository
 from src.db.repositories.symbol_catalog_repository import JsonSymbolCatalogRepository
 from src.ingestion.catalog.json_artifact_loader import JsonArtifactSymbolCatalogSource
 from src.ingestion.catalog.kis_stock_code_source import KisStockCodeCatalogSource
@@ -116,6 +117,11 @@ def build_news_source(
         symbol_catalog_repository.save_selection_report_sync(selection_report)
     _log_symbol_selection(selection_report)
     http = JsonHttpClient(timeout_seconds=settings.source_timeout_seconds)
+    discovery_review_repository = (
+        JsonDiscoveryReviewRepository(directory=settings.data_dir / "discovery_reviews")
+        if settings.discovery_review_enabled
+        else None
+    )
     sources = []
 
     for source_name in active_sources:
@@ -174,6 +180,7 @@ def build_news_source(
                 result_limit_per_query=settings.naver_result_limit_per_query,
                 include_aliases=settings.naver_include_aliases,
                 include_query_keywords=settings.naver_include_query_keywords,
+                review_repository=discovery_review_repository,
             )
             setattr(source, "symbol_selection_report", selection_report)
             sources.append(source)

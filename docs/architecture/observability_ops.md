@@ -109,7 +109,11 @@ KIS/Kiwoom source 실행은 다음 이벤트를 남긴다.
 - `suspicious_item_count`
 - `top_query_yield_sample`
 - `top_symbol_yield_sample`
+- `top_classification_yield_sample`
 - `noisy_query_sample`
+- `noisy_alias_sample`
+- `noisy_keyword_sample`
+- `ambiguous_symbol_sample`
 - `item_count`
 - `partial_success`
 
