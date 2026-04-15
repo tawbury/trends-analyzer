@@ -13,6 +13,7 @@ from src.contracts.symbols import SymbolRecord
 from src.db.repositories.discovery_review_repository import JsonDiscoveryReviewRepository
 from src.ingestion.clients.naver_news_client import NaverNewsClient
 from src.ingestion.discovery.calibration import build_calibration_summary
+from src.ingestion.discovery.experiment import build_experiment_metadata
 from src.ingestion.discovery.filtering import DiscoveryCandidate, filter_discovery_candidates
 from src.ingestion.discovery.rules import DiscoveryRuleConfig
 from src.ingestion.loaders.provider_mapping import provider_metadata
@@ -38,6 +39,7 @@ class NaverNewsDiscoverySource:
         include_query_keywords: bool,
         review_repository: JsonDiscoveryReviewRepository | None = None,
         discovery_rules: DiscoveryRuleConfig | None = None,
+        discovery_rule_config_path: str = "",
     ) -> None:
         self.client = client
         self.symbol_records = symbol_records
@@ -47,6 +49,7 @@ class NaverNewsDiscoverySource:
         self.include_query_keywords = include_query_keywords
         self.review_repository = review_repository
         self.discovery_rules = discovery_rules or DiscoveryRuleConfig()
+        self.discovery_rule_config_path = discovery_rule_config_path
         self.last_execution_report = SourceExecutionReport(
             provider=self.source_name,
             requested_symbol_count=len(symbol_records),
@@ -121,6 +124,15 @@ class NaverNewsDiscoverySource:
                 generated_at=as_of,
                 review_items=filter_result.review_items,
                 calibration_summary=calibration_summary,
+                experiment_metadata=build_experiment_metadata(
+                    generated_at=as_of,
+                    provider=self.source_name,
+                    rules=self.discovery_rules,
+                    rule_config_path=self.discovery_rule_config_path,
+                    active_source_symbol_policy=_active_source_symbol_policy(self),
+                    selected_symbol_count=len(self.symbol_records),
+                    query_count=query_count,
+                ),
             )
         self.last_execution_report = SourceExecutionReport(
             provider=self.source_name,
@@ -206,6 +218,12 @@ def _map_response_items(
             )
         )
     return mapped
+
+
+def _active_source_symbol_policy(source: NaverNewsDiscoverySource) -> str:
+    report = getattr(source, "symbol_selection_report", None)
+    policy = getattr(report, "policy", "")
+    return str(policy or "unknown")
 
 
 def _clean_text(value: object) -> str:

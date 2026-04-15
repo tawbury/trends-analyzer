@@ -16,7 +16,9 @@ class DecisionCounts:
 class DiscoveryCalibrationSummary:
     per_query: dict[str, DecisionCounts] = field(default_factory=dict)
     per_symbol: dict[str, DecisionCounts] = field(default_factory=dict)
+    per_origin: dict[str, DecisionCounts] = field(default_factory=dict)
     per_classification: dict[str, DecisionCounts] = field(default_factory=dict)
+    noisy_query_sample: list[str] = field(default_factory=list)
     noisy_alias_sample: list[str] = field(default_factory=list)
     noisy_keyword_sample: list[str] = field(default_factory=list)
     ambiguous_symbol_sample: list[str] = field(default_factory=list)
@@ -27,7 +29,9 @@ def build_calibration_summary(
 ) -> DiscoveryCalibrationSummary:
     per_query: dict[str, DecisionCounts] = {}
     per_symbol: dict[str, DecisionCounts] = {}
+    per_origin: dict[str, DecisionCounts] = {}
     per_classification: dict[str, DecisionCounts] = {}
+    noisy_query_sample: list[str] = []
     noisy_alias_sample: list[str] = []
     noisy_keyword_sample: list[str] = []
     ambiguous_symbol_sample: list[str] = []
@@ -36,11 +40,17 @@ def build_calibration_summary(
     for item in review_items:
         per_query[item.query] = _increment(per_query.get(item.query, DecisionCounts()), item)
         per_symbol[item.symbol] = _increment(per_symbol.get(item.symbol, DecisionCounts()), item)
+        per_origin[item.query_origin] = _increment(
+            per_origin.get(item.query_origin, DecisionCounts()),
+            item,
+        )
         per_classification[item.classification] = _increment(
             per_classification.get(item.classification, DecisionCounts()),
             item,
         )
         symbol_queries.setdefault(item.symbol, set()).add(item.query)
+        if item.discovery_decision == "drop":
+            _append_sample(noisy_query_sample, item.query)
         if item.discovery_decision == "drop" and item.query_origin == "alias":
             _append_sample(noisy_alias_sample, item.query)
         if item.discovery_decision == "drop" and item.query_origin == "query_keyword":
@@ -54,7 +64,9 @@ def build_calibration_summary(
     return DiscoveryCalibrationSummary(
         per_query=per_query,
         per_symbol=per_symbol,
+        per_origin=per_origin,
         per_classification=per_classification,
+        noisy_query_sample=noisy_query_sample,
         noisy_alias_sample=noisy_alias_sample,
         noisy_keyword_sample=noisy_keyword_sample,
         ambiguous_symbol_sample=ambiguous_symbol_sample,

@@ -184,6 +184,7 @@ def build_news_source(
                 include_query_keywords=settings.naver_include_query_keywords,
                 review_repository=discovery_review_repository,
                 discovery_rules=discovery_rules,
+                discovery_rule_config_path=settings.discovery_rule_config_path,
             )
             setattr(source, "symbol_selection_report", selection_report)
             sources.append(source)

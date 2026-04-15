@@ -27,9 +27,9 @@
 | 항목 | 내용 |
 |------|------|
 | 작업 브랜치 | `main` |
-| 목표 | discovery evaluation rule을 설정 파일 기반으로 조정할 수 있는 rule config 계층 구현 |
-| 최근 완료 | discovery rule config JSON override, origin/classification-aware tuning, 예시 config를 구현하고 `python3 -m pytest` 31개 테스트 통과 |
-| 완료 조건 | 기본 rule은 기존 동작을 유지하고 JSON rule config로 threshold/origin/classification 조정 가능 |
+| 목표 | discovery rule tuning run을 비교할 수 있는 lightweight experiment metadata 및 calibration comparison artifact 구현 |
+| 최근 완료 | discovery experiment metadata, rule config fingerprint, latest run 대비 calibration comparison artifact를 구현하고 `python3 -m pytest` 34개 테스트 통과 |
+| 완료 조건 | review/calibration artifact에 experiment metadata가 포함되고 최신 이전 run 대비 decision/origin/classification/noisy query 변화가 JSON으로 비교 가능 |
 
 ## Code Consistency Rules
 
@@ -54,6 +54,7 @@
 | Query News Discovery | `src/ingestion/clients/naver_news_client.py`, `src/ingestion/loaders/naver_news_loader.py`, `src/ingestion/loaders/query_strategy.py` | selected symbol records의 name/alias/query keyword를 사용해 query 기반 뉴스 RawNewsItem 생성 |
 | Discovery Quality | `src/ingestion/discovery/`, `src/db/repositories/discovery_review_repository.py` | query 기반 discovery 결과를 Core 진입 전 rule-based 평가/필터링하고 keep/weak_keep/drop, query origin, classification, review/calibration artifact를 기록 |
 | Discovery Rule Config | `src/ingestion/discovery/rules.py` | discovery 평가 threshold, noise terms, origin bonus/penalty, classification override를 JSON config 또는 기본값으로 관리 |
+| Discovery Experiments | `src/ingestion/discovery/experiment.py`, `src/ingestion/discovery/calibration_compare.py` | rule config fingerprint와 source selection metadata를 review artifact에 기록하고 latest run 대비 decision/origin/classification/noisy query 변화를 JSON comparison artifact로 관리 |
 
 ## Project Context
 
