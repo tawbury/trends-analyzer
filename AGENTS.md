@@ -27,9 +27,9 @@
 | 항목 | 내용 |
 |------|------|
 | 작업 브랜치 | `main` |
-| 목표 | discovery rule tuning run을 비교할 수 있는 lightweight experiment metadata 및 calibration comparison artifact 구현 |
-| 최근 완료 | discovery experiment metadata, rule config fingerprint, latest run 대비 calibration comparison artifact를 구현하고 `python3 -m pytest` 34개 테스트 통과 |
-| 완료 조건 | review/calibration artifact에 experiment metadata가 포함되고 최신 이전 run 대비 decision/origin/classification/noisy query 변화가 JSON으로 비교 가능 |
+| 목표 | discovery review artifact에 대한 lightweight human review feedback 및 auto-vs-human calibration report 구현 |
+| 최근 완료 | discovery human review feedback JSONL, auto-vs-human disagreement report, calibration assist summary를 구현하고 `python3 -m pytest` 37개 테스트 통과 |
+| 완료 조건 | 수동 human_label feedback을 file-based로 기록하고 자동 discovery_decision 대비 disagreement/origin/classification/tuning hint summary가 생성 가능 |
 
 ## Code Consistency Rules
 
@@ -55,6 +55,7 @@
 | Discovery Quality | `src/ingestion/discovery/`, `src/db/repositories/discovery_review_repository.py` | query 기반 discovery 결과를 Core 진입 전 rule-based 평가/필터링하고 keep/weak_keep/drop, query origin, classification, review/calibration artifact를 기록 |
 | Discovery Rule Config | `src/ingestion/discovery/rules.py` | discovery 평가 threshold, noise terms, origin bonus/penalty, classification override를 JSON config 또는 기본값으로 관리 |
 | Discovery Experiments | `src/ingestion/discovery/experiment.py`, `src/ingestion/discovery/calibration_compare.py` | rule config fingerprint와 source selection metadata를 review artifact에 기록하고 latest run 대비 decision/origin/classification/noisy query 변화를 JSON comparison artifact로 관리 |
+| Discovery Human Review | `src/ingestion/discovery/human_review.py`, `src/db/repositories/discovery_human_review_repository.py` | review item stable id 기반 수동 human_label feedback을 JSONL로 기록하고 auto-vs-human disagreement 및 tuning attention summary를 file-based report로 관리 |
 
 ## Project Context
 

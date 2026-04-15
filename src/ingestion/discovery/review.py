@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import hashlib
+import json
 from dataclasses import dataclass
 
 from src.ingestion.discovery.evaluation import DiscoveryEvaluation
@@ -18,6 +20,7 @@ class DiscoveryReviewItem:
     discovery_reasons: list[str]
     discovery_suspicious: bool
     classification: str
+    review_item_id: str = ""
 
 
 def build_review_item(
@@ -27,7 +30,7 @@ def build_review_item(
 ) -> DiscoveryReviewItem:
     record = candidate.record
     item = candidate.item
-    return DiscoveryReviewItem(
+    review_item = DiscoveryReviewItem(
         symbol=record.symbol,
         query=candidate.query,
         query_origin=candidate.query_origin,
@@ -40,3 +43,28 @@ def build_review_item(
         discovery_suspicious=evaluation.suspicious,
         classification=record.metadata.get("classification") or record.security_type or "unknown",
     )
+    return DiscoveryReviewItem(
+        **{
+            **review_item.__dict__,
+            "review_item_id": build_review_item_id(review_item),
+        }
+    )
+
+
+def build_review_item_id(item: DiscoveryReviewItem | dict) -> str:
+    payload = {
+        "symbol": _field(item, "symbol"),
+        "query": _field(item, "query"),
+        "query_origin": _field(item, "query_origin"),
+        "title": _field(item, "title"),
+        "url": _field(item, "url"),
+        "published_at": _field(item, "published_at"),
+    }
+    encoded = json.dumps(payload, ensure_ascii=False, sort_keys=True).encode("utf-8")
+    return hashlib.sha256(encoded).hexdigest()[:16]
+
+
+def _field(item: DiscoveryReviewItem | dict, name: str) -> str:
+    if isinstance(item, dict):
+        return str(item.get(name) or "")
+    return str(getattr(item, name) or "")
