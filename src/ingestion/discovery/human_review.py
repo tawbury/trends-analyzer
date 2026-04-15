@@ -8,6 +8,22 @@ from src.ingestion.discovery.review import build_review_item_id
 
 DISCOVERY_LABELS = {"keep", "weak_keep", "drop"}
 
+REVIEW_QUEUE_FIELDS = [
+    "review_item_id",
+    "symbol",
+    "query",
+    "query_origin",
+    "classification",
+    "discovery_decision",
+    "discovery_score",
+    "title",
+    "url",
+    "published_at",
+    "human_label",
+    "note",
+    "rule_feedback_tag",
+]
+
 
 @dataclass(frozen=True)
 class HumanReviewFeedback:
@@ -43,6 +59,44 @@ def human_review_feedback_from_dict(payload: dict[str, Any]) -> HumanReviewFeedb
 
 def human_review_feedback_to_dict(feedback: HumanReviewFeedback) -> dict[str, Any]:
     return asdict(feedback)
+
+
+def review_item_to_queue_row(item: dict[str, Any]) -> dict[str, str]:
+    item_ref = str(item.get("review_item_id") or build_review_item_id(item))
+    return {
+        "review_item_id": item_ref,
+        "symbol": str(item.get("symbol") or ""),
+        "query": str(item.get("query") or ""),
+        "query_origin": str(item.get("query_origin") or ""),
+        "classification": str(item.get("classification") or ""),
+        "discovery_decision": str(item.get("discovery_decision") or ""),
+        "discovery_score": str(item.get("discovery_score") or ""),
+        "title": str(item.get("title") or ""),
+        "url": str(item.get("url") or ""),
+        "published_at": str(item.get("published_at") or ""),
+        "human_label": "",
+        "note": "",
+        "rule_feedback_tag": "",
+    }
+
+
+def feedback_from_import_row(
+    row: dict[str, Any],
+    *,
+    reviewed_at: str,
+    reviewer: str = "",
+    session_tag: str = "",
+) -> HumanReviewFeedback:
+    payload = {
+        "item_ref": row.get("item_ref") or row.get("review_item_id"),
+        "human_label": row.get("human_label"),
+        "note": row.get("note", ""),
+        "rule_feedback_tag": row.get("rule_feedback_tag", ""),
+        "reviewed_at": row.get("reviewed_at") or reviewed_at,
+        "reviewer": row.get("reviewer") or reviewer,
+        "session_tag": row.get("session_tag") or session_tag,
+    }
+    return human_review_feedback_from_dict(payload)
 
 
 def build_human_review_report(
