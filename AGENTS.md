@@ -27,9 +27,9 @@
 | 항목 | 내용 |
 |------|------|
 | 작업 브랜치 | `main` |
-| 목표 | symbol catalog selection 결과를 KIS/Kiwoom runtime source 실행에 연결하고 운영 가시성 추가 |
+| 목표 | symbol selection 지표 의미 정제, provider 실패 로그 correlation 보강, selection artifact atomic write 적용 |
 | 최근 완료 | catalog 기반 source symbol selection artifact, provider source execution report, invalid-code exclusion observability 구현 |
-| 완료 조건 | 충족: catalog 기반 selected symbols가 provider source 생성에 사용되고 selection/source execution report 로그와 artifact 검증 |
+| 완료 조건 | catalog_invalid_code_count와 selection_invalid_code_excluded_count 분리, explicit/fallback 구분, correlation 포함 실패 로그와 atomic artifact write 검증 |
 
 ## Code Consistency Rules
 

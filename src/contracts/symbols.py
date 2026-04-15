@@ -60,11 +60,13 @@ class SymbolSelectionReport:
     policy: str
     catalog_id: str
     explicit_override_used: bool
+    catalog_missing_fallback_used: bool
     selected_symbol_count: int
     selected_records: list[SymbolRecord]
     catalog_total_count: int = 0
+    catalog_invalid_code_count: int = 0
     valid_code_count: int = 0
-    invalid_code_excluded_count: int = 0
+    selection_invalid_code_excluded_count: int = 0
     market_filters: list[str] = field(default_factory=list)
     classification_filters: list[str] = field(default_factory=list)
     limit: int = 0

@@ -159,8 +159,36 @@ class SymbolCatalogTest(unittest.IsolatedAsyncioTestCase):
         )
 
         self.assertEqual(report.catalog_total_count, 3)
-        self.assertEqual(report.invalid_code_excluded_count, 1)
+        self.assertEqual(report.catalog_invalid_code_count, 1)
+        self.assertEqual(report.selection_invalid_code_excluded_count, 1)
         self.assertEqual(report.selected_symbol_count, 2)
+
+    async def test_selection_report_distinguishes_explicit_and_catalog_fallback(self) -> None:
+        explicit_report = build_symbol_selection_report(
+            policy=SymbolSelectionPolicy(
+                mode="explicit",
+                explicit_symbols=["005930"],
+                markets=[],
+                classifications=[],
+            ),
+            catalog=None,
+            generated_at=datetime.fromisoformat("2026-04-15T16:20:00+09:00"),
+        )
+        fallback_report = build_symbol_selection_report(
+            policy=SymbolSelectionPolicy(
+                mode="catalog_filtered",
+                explicit_symbols=["005930"],
+                markets=["KOSPI"],
+                classifications=["stock"],
+            ),
+            catalog=None,
+            generated_at=datetime.fromisoformat("2026-04-15T16:20:00+09:00"),
+        )
+
+        self.assertTrue(explicit_report.explicit_override_used)
+        self.assertFalse(explicit_report.catalog_missing_fallback_used)
+        self.assertFalse(fallback_report.explicit_override_used)
+        self.assertTrue(fallback_report.catalog_missing_fallback_used)
 
     async def test_catalog_all_policy_ignores_market_filters(self) -> None:
         temp_dir = TemporaryDirectory()

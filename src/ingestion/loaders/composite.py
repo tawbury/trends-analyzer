@@ -102,23 +102,34 @@ def _log_source_start(
                 "catalog_id": report.catalog_id,
                 "symbol_selection_policy": report.policy,
                 "selected_symbol_count": str(report.selected_symbol_count),
+                "catalog_invalid_code_count": str(report.catalog_invalid_code_count),
+                "selection_invalid_code_excluded_count": str(
+                    report.selection_invalid_code_excluded_count
+                ),
                 "market_filters": ",".join(report.market_filters),
                 "classification_filters": ",".join(report.classification_filters),
                 "explicit_override_used": str(report.explicit_override_used).lower(),
+                "catalog_missing_fallback_used": str(
+                    report.catalog_missing_fallback_used
+                ).lower(),
             }
         )
     logger.info(
         (
             "source_fetch_started source=%s catalog_id=%s policy=%s selected_symbols=%s "
-            "markets=%s classifications=%s explicit_override=%s"
+            "catalog_invalid_codes=%s selection_invalid_excluded=%s "
+            "markets=%s classifications=%s explicit_override=%s catalog_missing_fallback=%s"
         ),
         source_name,
         getattr(report, "catalog_id", "") or "none",
         getattr(report, "policy", "") or "none",
         getattr(report, "selected_symbol_count", 0),
+        getattr(report, "catalog_invalid_code_count", 0),
+        getattr(report, "selection_invalid_code_excluded_count", 0),
         ",".join(getattr(report, "market_filters", [])),
         ",".join(getattr(report, "classification_filters", [])),
         getattr(report, "explicit_override_used", False),
+        getattr(report, "catalog_missing_fallback_used", False),
         extra=fields,
     )
 
@@ -133,6 +144,7 @@ def _log_execution_report(
         "requested_symbol_count": str(report.requested_symbol_count),
         "succeeded_symbol_count": str(report.succeeded_symbol_count),
         "failed_symbol_count": str(report.failed_symbol_count),
+        "failed_symbol_sample": ",".join(report.failed_symbols[:5]),
         "item_count": str(report.item_count),
         "partial_success": str(report.partial_success).lower(),
     }
@@ -141,7 +153,8 @@ def _log_execution_report(
     logger.info(
         (
             "source_execution_report provider=%s requested_symbols=%s "
-            "succeeded_symbols=%s failed_symbols=%s item_count=%s partial_success=%s"
+            "succeeded_symbols=%s failed_symbols=%s item_count=%s partial_success=%s "
+            "failed_symbol_sample=%s"
         ),
         report.provider,
         report.requested_symbol_count,
@@ -149,5 +162,6 @@ def _log_execution_report(
         report.failed_symbol_count,
         report.item_count,
         report.partial_success,
+        ",".join(report.failed_symbols[:5]),
         extra=fields,
     )

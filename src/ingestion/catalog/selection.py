@@ -32,18 +32,27 @@ def build_symbol_selection_report(
 ) -> SymbolSelectionReport:
     selected_records = select_source_symbol_records(policy=policy, catalog=catalog)
     catalog_records = catalog.records if catalog is not None else []
-    invalid_code_count = sum(1 for record in catalog_records if not _is_valid_symbol_code(record.symbol))
-    valid_code_count = len(catalog_records) - invalid_code_count
+    catalog_invalid_code_count = sum(
+        1 for record in catalog_records if not _is_valid_symbol_code(record.symbol)
+    )
+    selection_invalid_code_excluded_count = _selection_invalid_code_excluded_count(
+        policy=policy,
+        catalog=catalog,
+    )
+    valid_code_count = len(catalog_records) - catalog_invalid_code_count
+    mode = policy.mode.strip().lower()
     return SymbolSelectionReport(
         generated_at=generated_at,
         policy=policy.mode,
         catalog_id=catalog.id if catalog is not None else "",
-        explicit_override_used=policy.mode.strip().lower() == "explicit" or catalog is None,
+        explicit_override_used=mode == "explicit",
+        catalog_missing_fallback_used=mode != "explicit" and catalog is None,
         selected_symbol_count=len(selected_records),
         selected_records=selected_records,
         catalog_total_count=len(catalog_records),
+        catalog_invalid_code_count=catalog_invalid_code_count,
         valid_code_count=valid_code_count,
-        invalid_code_excluded_count=invalid_code_count if policy.valid_code_only else 0,
+        selection_invalid_code_excluded_count=selection_invalid_code_excluded_count,
         market_filters=policy.markets,
         classification_filters=policy.classifications,
         limit=policy.limit,
@@ -86,6 +95,41 @@ def _matches(record: SymbolRecord, policy: SymbolSelectionPolicy) -> bool:
 
 def _matches_code_policy(record: SymbolRecord, policy: SymbolSelectionPolicy) -> bool:
     if policy.valid_code_only and not _is_valid_symbol_code(record.symbol):
+        return False
+    return True
+
+
+def _selection_invalid_code_excluded_count(
+    *,
+    policy: SymbolSelectionPolicy,
+    catalog: SymbolCatalog | None,
+) -> int:
+    if catalog is None or not policy.valid_code_only:
+        return 0
+    mode = policy.mode.strip().lower()
+    if mode in {"explicit"}:
+        return 0
+    if mode in {"catalog_all", "all_catalog"}:
+        candidate_records = catalog.records
+    elif mode in {"catalog_filtered", "filtered_catalog", "candidate"}:
+        candidate_records = [
+            record for record in catalog.records if _matches_filters_without_code_policy(record, policy)
+        ]
+    else:
+        candidate_records = []
+    return sum(1 for record in candidate_records if not _is_valid_symbol_code(record.symbol))
+
+
+def _matches_filters_without_code_policy(
+    record: SymbolRecord,
+    policy: SymbolSelectionPolicy,
+) -> bool:
+    markets = {item.upper() for item in policy.markets if item}
+    classifications = {item.lower() for item in policy.classifications if item}
+    classification = record.metadata.get("classification", "").lower()
+    if markets and record.market.upper() not in markets:
+        return False
+    if classifications and classification not in classifications:
         return False
     return True
 

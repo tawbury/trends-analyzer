@@ -4,6 +4,7 @@ import unittest
 from datetime import datetime
 from typing import Any
 
+from src.contracts.runtime import CorrelationContext
 from src.ingestion.loaders.kis_loader import KisMarketDataSource
 from src.ingestion.loaders.kiwoom_loader import KiwoomStockInfoSource
 
@@ -94,15 +95,23 @@ class SourceLoaderMappingTest(unittest.IsolatedAsyncioTestCase):
             client=PartiallyFailingKiwoomClient(),
             symbols=["000660", "000000"],
         )
-        items = await source.fetch_daily(
-            as_of=datetime.fromisoformat("2026-04-15T16:10:00+09:00")
-        )
+        with self.assertLogs("src.ingestion.loaders.kiwoom_loader", level="WARNING") as logs:
+            items = await source.fetch_daily(
+                as_of=datetime.fromisoformat("2026-04-15T16:10:00+09:00"),
+                correlation=CorrelationContext(
+                    correlation_id="corr_test",
+                    job_id="job_test",
+                    requested_by="unit_test",
+                ),
+            )
 
         self.assertEqual(len(items), 1)
         self.assertEqual(source.last_execution_report.requested_symbol_count, 2)
         self.assertEqual(source.last_execution_report.succeeded_symbol_count, 1)
         self.assertEqual(source.last_execution_report.failed_symbol_count, 1)
         self.assertTrue(source.last_execution_report.partial_success)
+        self.assertIn("correlation_id=corr_test", logs.output[0])
+        self.assertIn("job_id=job_test", logs.output[0])
         self.assertIn("stock_info_as_raw_item", items[0].metadata["mapping_type"])
 
 

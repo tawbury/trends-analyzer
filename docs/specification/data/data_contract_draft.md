@@ -83,11 +83,13 @@ SymbolSelectionReport:
 - `policy`
 - `catalog_id`
 - `explicit_override_used`
+- `catalog_missing_fallback_used`
 - `selected_symbol_count`
 - `selected_records`
 - `catalog_total_count`
+- `catalog_invalid_code_count`
 - `valid_code_count`
-- `invalid_code_excluded_count`
+- `selection_invalid_code_excluded_count`
 - `market_filters`
 - `classification_filters`
 - `limit`

@@ -203,27 +203,36 @@ def _log_symbol_selection(selection_report) -> None:
     logger.info(
         (
             "source_symbol_selection catalog_id=%s policy=%s selected_symbol_count=%s "
-            "catalog_total_count=%s valid_code_count=%s invalid_code_excluded_count=%s "
-            "markets=%s classifications=%s explicit_override=%s"
+            "catalog_total_count=%s catalog_invalid_code_count=%s valid_code_count=%s "
+            "selection_invalid_code_excluded_count=%s markets=%s classifications=%s "
+            "explicit_override=%s catalog_missing_fallback=%s"
         ),
         selection_report.catalog_id or "none",
         selection_report.policy,
         selection_report.selected_symbol_count,
         selection_report.catalog_total_count,
+        selection_report.catalog_invalid_code_count,
         selection_report.valid_code_count,
-        selection_report.invalid_code_excluded_count,
+        selection_report.selection_invalid_code_excluded_count,
         ",".join(selection_report.market_filters),
         ",".join(selection_report.classification_filters),
         selection_report.explicit_override_used,
+        selection_report.catalog_missing_fallback_used,
         extra={
             "event": "source_symbol_selection",
             "catalog_id": selection_report.catalog_id,
             "symbol_selection_policy": selection_report.policy,
             "selected_symbol_count": str(selection_report.selected_symbol_count),
             "catalog_total_count": str(selection_report.catalog_total_count),
+            "catalog_invalid_code_count": str(selection_report.catalog_invalid_code_count),
             "valid_code_count": str(selection_report.valid_code_count),
-            "invalid_code_excluded_count": str(selection_report.invalid_code_excluded_count),
+            "selection_invalid_code_excluded_count": str(
+                selection_report.selection_invalid_code_excluded_count
+            ),
             "explicit_override_used": str(selection_report.explicit_override_used).lower(),
+            "catalog_missing_fallback_used": str(
+                selection_report.catalog_missing_fallback_used
+            ).lower(),
         },
     )
 

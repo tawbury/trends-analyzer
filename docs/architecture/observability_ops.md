@@ -89,7 +89,10 @@ KIS/Kiwoom source 실행은 다음 이벤트를 남긴다.
 - `catalog_id`
 - `symbol_selection_policy`
 - `selected_symbol_count`
-- `invalid_code_excluded_count`
+- `catalog_invalid_code_count`
+- `selection_invalid_code_excluded_count`
+- `explicit_override_used`
+- `catalog_missing_fallback_used`
 - `provider`
 - `requested_symbol_count`
 - `succeeded_symbol_count`

@@ -12,6 +12,7 @@ from src.ingestion.loaders.provider_mapping import (
     normalize_numeric_text,
     provider_metadata,
 )
+from src.shared.logging import correlation_fields
 
 logger = logging.getLogger(__name__)
 
@@ -45,11 +46,11 @@ class KiwoomStockInfoSource:
                 items.append(self._fetch_symbol_item(symbol=symbol, as_of=as_of))
             except Exception as exc:
                 failed_symbols.append(symbol)
-                logger.warning(
-                    "source_symbol_fetch_failed provider=%s symbol=%s error=%s",
-                    self.source_name,
-                    symbol,
-                    str(exc),
+                _log_symbol_failure(
+                    provider=self.source_name,
+                    symbol=symbol,
+                    error=str(exc),
+                    correlation=correlation,
                 )
                 continue
             succeeded_symbols.append(symbol)
@@ -112,3 +113,29 @@ def _field(payload: dict[str, Any], *names: str, fallback: str = "") -> str:
         if value is not None and str(value).strip():
             return str(value).strip()
     return fallback
+
+
+def _log_symbol_failure(
+    *,
+    provider: str,
+    symbol: str,
+    error: str,
+    correlation: CorrelationContext | None,
+) -> None:
+    fields = {
+        "event": "source_symbol_fetch_failed",
+        "source": provider,
+        "symbol": symbol,
+        "error": error,
+    }
+    if correlation:
+        fields.update(correlation_fields(correlation))
+    logger.warning(
+        "source_symbol_fetch_failed provider=%s symbol=%s correlation_id=%s job_id=%s error=%s",
+        provider,
+        symbol,
+        fields.get("correlation_id", ""),
+        fields.get("job_id", ""),
+        error,
+        extra=fields,
+    )
