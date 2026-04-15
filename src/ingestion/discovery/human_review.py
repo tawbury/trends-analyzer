@@ -10,6 +10,12 @@ DISCOVERY_LABELS = {"keep", "weak_keep", "drop"}
 
 REVIEW_QUEUE_FIELDS = [
     "review_item_id",
+    "already_reviewed",
+    "latest_human_label",
+    "latest_rule_feedback_tag",
+    "latest_reviewed_at",
+    "latest_reviewer",
+    "latest_session_tag",
     "symbol",
     "query",
     "query_origin",
@@ -61,10 +67,20 @@ def human_review_feedback_to_dict(feedback: HumanReviewFeedback) -> dict[str, An
     return asdict(feedback)
 
 
-def review_item_to_queue_row(item: dict[str, Any]) -> dict[str, str]:
+def review_item_to_queue_row(
+    item: dict[str, Any],
+    *,
+    latest_feedback: HumanReviewFeedback | None = None,
+) -> dict[str, str]:
     item_ref = str(item.get("review_item_id") or build_review_item_id(item))
     return {
         "review_item_id": item_ref,
+        "already_reviewed": "true" if latest_feedback is not None else "false",
+        "latest_human_label": latest_feedback.human_label if latest_feedback else "",
+        "latest_rule_feedback_tag": latest_feedback.rule_feedback_tag if latest_feedback else "",
+        "latest_reviewed_at": latest_feedback.reviewed_at if latest_feedback else "",
+        "latest_reviewer": latest_feedback.reviewer if latest_feedback else "",
+        "latest_session_tag": latest_feedback.session_tag if latest_feedback else "",
         "symbol": str(item.get("symbol") or ""),
         "query": str(item.get("query") or ""),
         "query_origin": str(item.get("query_origin") or ""),

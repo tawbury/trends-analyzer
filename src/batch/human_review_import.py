@@ -26,6 +26,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--reviewed-at", default="")
     parser.add_argument("--reviewer", default="")
     parser.add_argument("--session-tag", default="")
+    parser.add_argument("--dry-run", action="store_true")
     args = parser.parse_args(argv)
 
     reviewed_at = args.reviewed_at or datetime.now().astimezone().isoformat()
@@ -37,12 +38,12 @@ def main(argv: list[str] | None = None) -> int:
         reviewed_at=reviewed_at,
         reviewer=args.reviewer,
         session_tag=args.session_tag,
+        dry_run=args.dry_run,
     )
+    action = "dry_run" if args.dry_run else "imported"
     print(
-        "imported "
-        f"imported={result['imported_count']} "
-        f"skipped={result['skipped_count']} "
-        f"invalid={result['invalid_count']}"
+        f"{action} imported={result['imported_count']} "
+        f"skipped={result['skipped_count']} invalid={result['invalid_count']}"
     )
     if result["invalid_samples"]:
         print(f"invalid_samples={result['invalid_samples']}")
@@ -57,6 +58,7 @@ def import_feedback_rows(
     reviewed_at: str,
     reviewer: str = "",
     session_tag: str = "",
+    dry_run: bool = False,
 ) -> dict[str, Any]:
     imported_count = 0
     skipped_count = 0
@@ -80,7 +82,8 @@ def import_feedback_rows(
             if len(invalid_samples) < 5:
                 invalid_samples.append(f"row={index} error={exc}")
             continue
-        repository.append_feedback_sync(provider=provider, feedback=feedback)
+        if not dry_run:
+            repository.append_feedback_sync(provider=provider, feedback=feedback)
         imported_count += 1
 
     return {
@@ -88,12 +91,13 @@ def import_feedback_rows(
         "skipped_count": skipped_count,
         "invalid_count": invalid_count,
         "invalid_samples": invalid_samples,
+        "dry_run": dry_run,
     }
 
 
 def read_import_rows(*, path: Path, file_format: str) -> list[dict[str, Any]]:
     if file_format == "csv":
-        with path.open("r", encoding="utf-8", newline="") as file:
+        with path.open("r", encoding="utf-8-sig", newline="") as file:
             return [dict(row) for row in csv.DictReader(file)]
     rows: list[dict[str, Any]] = []
     for line in path.read_text(encoding="utf-8").splitlines():
