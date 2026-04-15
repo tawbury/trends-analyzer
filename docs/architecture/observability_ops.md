@@ -101,6 +101,15 @@ KIS/Kiwoom source 실행은 다음 이벤트를 남긴다.
 - `query_count`
 - `failed_query_count`
 - `failed_query_sample`
+- `raw_discovered_item_count`
+- `deduplicated_item_count`
+- `kept_item_count`
+- `weak_keep_item_count`
+- `dropped_item_count`
+- `suspicious_item_count`
+- `top_query_yield_sample`
+- `top_symbol_yield_sample`
+- `noisy_query_sample`
 - `item_count`
 - `partial_success`
 

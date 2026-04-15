@@ -11,6 +11,7 @@ from src.contracts.core import RawNewsItem
 from src.contracts.runtime import CorrelationContext, SourceExecutionReport
 from src.contracts.symbols import SymbolRecord
 from src.ingestion.clients.naver_news_client import NaverNewsClient
+from src.ingestion.discovery.filtering import DiscoveryCandidate, filter_discovery_candidates
 from src.ingestion.loaders.provider_mapping import provider_metadata
 from src.ingestion.loaders.query_strategy import build_symbol_news_queries
 from src.shared.logging import correlation_fields
@@ -54,8 +55,7 @@ class NaverNewsDiscoverySource:
         as_of: datetime,
         correlation: CorrelationContext | None = None,
     ) -> list[RawNewsItem]:
-        items: list[RawNewsItem] = []
-        seen_keys: set[str] = set()
+        candidates: list[DiscoveryCandidate] = []
         succeeded_symbols: set[str] = set()
         failed_symbols: set[str] = set()
         failed_queries: list[str] = []
@@ -87,19 +87,21 @@ class NaverNewsDiscoverySource:
                     )
                     continue
                 symbol_had_success = True
-                symbol_items = _map_response_items(
+                symbol_candidates = _map_response_items(
                     response=response,
                     record=record,
                     query=query,
                     as_of=as_of,
-                    seen_keys=seen_keys,
                 )
-                items.extend(symbol_items)
+                candidates.extend(symbol_candidates)
             if symbol_had_success:
                 succeeded_symbols.add(record.symbol)
             elif queries:
                 failed_symbols.add(record.symbol)
 
+        filter_result = filter_discovery_candidates(candidates=candidates, as_of=as_of)
+        items = filter_result.items
+        metrics = filter_result.metrics
         self.last_execution_report = SourceExecutionReport(
             provider=self.source_name,
             requested_symbol_count=len(self.symbol_records),
@@ -111,6 +113,15 @@ class NaverNewsDiscoverySource:
             query_count=query_count,
             failed_query_count=len(failed_queries),
             failed_query_sample=failed_queries[:5],
+            raw_discovered_item_count=metrics.raw_discovered_item_count,
+            deduplicated_item_count=metrics.deduplicated_item_count,
+            kept_item_count=metrics.kept_item_count,
+            weak_keep_item_count=metrics.weak_keep_item_count,
+            dropped_item_count=metrics.dropped_item_count,
+            suspicious_item_count=metrics.suspicious_item_count,
+            top_query_yield_sample=metrics.top_query_yield_sample(),
+            top_symbol_yield_sample=metrics.top_symbol_yield_sample(),
+            noisy_query_sample=metrics.noisy_query_sample,
         )
         if failed_symbols and not succeeded_symbols and not items:
             raise RuntimeError("Naver News source failed for all requested symbols")
@@ -123,41 +134,45 @@ def _map_response_items(
     record: SymbolRecord,
     query: str,
     as_of: datetime,
-    seen_keys: set[str],
-) -> list[RawNewsItem]:
+) -> list[DiscoveryCandidate]:
     raw_items = response.get("items", [])
     if not isinstance(raw_items, list):
         return []
-    mapped: list[RawNewsItem] = []
+    mapped: list[DiscoveryCandidate] = []
     for index, item in enumerate(raw_items, start=1):
         if not isinstance(item, dict):
             continue
         title = _clean_text(item.get("title"))
         description = _clean_text(item.get("description"))
         link = str(item.get("originallink") or item.get("link") or "").strip()
-        dedup_key = link or title
-        if not dedup_key or dedup_key in seen_keys:
+        dedup_key = _dedup_key(link=link, title=title)
+        if not dedup_key:
             continue
-        seen_keys.add(dedup_key)
         published_at = _parse_pub_date(item.get("pubDate"), fallback=as_of)
+        raw_item = RawNewsItem(
+            id=f"raw_naver_news_{record.symbol}_{published_at:%Y%m%d%H%M%S}_{index}",
+            source="naver_news",
+            source_id=f"naver:news:{record.symbol}:{dedup_key}",
+            title=title or query,
+            body=description or title or query,
+            url=link,
+            published_at=published_at,
+            collected_at=as_of,
+            language="ko",
+            symbols=[record.symbol],
+            metadata={
+                **provider_metadata("naver_news", item),
+                "query": query,
+                "symbol_name": record.name,
+                "mapping_type": "naver_news_search_result",
+            },
+        )
         mapped.append(
-            RawNewsItem(
-                id=f"raw_naver_news_{record.symbol}_{published_at:%Y%m%d%H%M%S}_{index}",
-                source="naver_news",
-                source_id=f"naver:news:{record.symbol}:{dedup_key}",
-                title=title or query,
-                body=description or title or query,
-                url=link,
-                published_at=published_at,
-                collected_at=as_of,
-                language="ko",
-                symbols=[record.symbol],
-                metadata={
-                    **provider_metadata("naver_news", item),
-                    "query": query,
-                    "symbol_name": record.name,
-                    "mapping_type": "naver_news_search_result",
-                },
+            DiscoveryCandidate(
+                item=raw_item,
+                record=record,
+                query=query,
+                dedup_key=dedup_key,
             )
         )
     return mapped
@@ -168,6 +183,12 @@ def _clean_text(value: object) -> str:
         return ""
     text = html.unescape(str(value))
     return _TAG_RE.sub("", text).strip()
+
+
+def _dedup_key(*, link: str, title: str) -> str:
+    if link:
+        return link
+    return re.sub(r"\W+", "", title.lower())
 
 
 def _parse_pub_date(value: object, *, fallback: datetime) -> datetime:

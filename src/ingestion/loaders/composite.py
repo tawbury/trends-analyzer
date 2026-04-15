@@ -148,6 +148,15 @@ def _log_execution_report(
         "query_count": str(report.query_count),
         "failed_query_count": str(report.failed_query_count),
         "failed_query_sample": ",".join(report.failed_query_sample[:5]),
+        "raw_discovered_item_count": str(report.raw_discovered_item_count),
+        "deduplicated_item_count": str(report.deduplicated_item_count),
+        "kept_item_count": str(report.kept_item_count),
+        "weak_keep_item_count": str(report.weak_keep_item_count),
+        "dropped_item_count": str(report.dropped_item_count),
+        "suspicious_item_count": str(report.suspicious_item_count),
+        "top_query_yield_sample": ",".join(report.top_query_yield_sample[:5]),
+        "top_symbol_yield_sample": ",".join(report.top_symbol_yield_sample[:5]),
+        "noisy_query_sample": ",".join(report.noisy_query_sample[:5]),
         "item_count": str(report.item_count),
         "partial_success": str(report.partial_success).lower(),
     }
@@ -157,7 +166,10 @@ def _log_execution_report(
         (
             "source_execution_report provider=%s requested_symbols=%s "
             "succeeded_symbols=%s failed_symbols=%s item_count=%s partial_success=%s "
-            "query_count=%s failed_query_count=%s failed_symbol_sample=%s failed_query_sample=%s"
+            "query_count=%s failed_query_count=%s raw_discovered=%s deduplicated=%s "
+            "kept=%s weak_keep=%s dropped=%s suspicious=%s "
+            "failed_symbol_sample=%s failed_query_sample=%s top_query_yield=%s "
+            "top_symbol_yield=%s noisy_query_sample=%s"
         ),
         report.provider,
         report.requested_symbol_count,
@@ -167,7 +179,16 @@ def _log_execution_report(
         report.partial_success,
         report.query_count,
         report.failed_query_count,
+        report.raw_discovered_item_count,
+        report.deduplicated_item_count,
+        report.kept_item_count,
+        report.weak_keep_item_count,
+        report.dropped_item_count,
+        report.suspicious_item_count,
         ",".join(report.failed_symbols[:5]),
         ",".join(report.failed_query_sample[:5]),
+        ",".join(report.top_query_yield_sample[:5]),
+        ",".join(report.top_symbol_yield_sample[:5]),
+        ",".join(report.noisy_query_sample[:5]),
         extra=fields,
     )

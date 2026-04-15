@@ -1,0 +1,1 @@
+"""Discovery quality evaluation helpers."""

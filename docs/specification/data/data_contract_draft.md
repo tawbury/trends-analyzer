@@ -113,6 +113,17 @@ Provider source 실행 후 런타임 관측성을 위해 다음 값을 기록한
 - `query_count`
 - `failed_query_count`
 - `failed_query_sample`
+- `raw_discovered_item_count`
+- `deduplicated_item_count`
+- `kept_item_count`
+- `weak_keep_item_count`
+- `dropped_item_count`
+- `suspicious_item_count`
+- `top_query_yield_sample`
+- `top_symbol_yield_sample`
+- `noisy_query_sample`
+
+Query 기반 discovery source는 Core 진입 전에 rule-based 품질 평가를 수행할 수 있다. 평가 결과는 `RawNewsItem.metadata`에 `discovery_decision`, `discovery_score`, `discovery_reasons`, `discovery_suspicious`로 보존한다. 이 값은 Core signal contract가 아니라 source/discovery 관측성 metadata다.
 
 ### RawNewsItem
 

@@ -109,6 +109,10 @@ class NaverNewsLoaderTest(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(items[0].title, "삼성전자 AI 반도체 투자")
         self.assertEqual(source.last_execution_report.query_count, 1)
         self.assertEqual(source.last_execution_report.item_count, 1)
+        self.assertEqual(source.last_execution_report.raw_discovered_item_count, 2)
+        self.assertEqual(source.last_execution_report.deduplicated_item_count, 1)
+        self.assertEqual(source.last_execution_report.kept_item_count, 1)
+        self.assertEqual(items[0].metadata["discovery_decision"], "keep")
 
     async def test_naver_news_loader_reports_failed_queries(self) -> None:
         source = NaverNewsDiscoverySource(
@@ -141,6 +145,7 @@ class NaverNewsLoaderTest(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(source.last_execution_report.query_count, 2)
         self.assertEqual(source.last_execution_report.failed_query_count, 1)
         self.assertTrue(source.last_execution_report.partial_success)
+        self.assertEqual(source.last_execution_report.raw_discovered_item_count, 0)
 
 
 if __name__ == "__main__":
