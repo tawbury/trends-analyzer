@@ -27,9 +27,9 @@
 | 항목 | 내용 |
 |------|------|
 | 작업 브랜치 | `main` |
-| 목표 | batch human review queue의 reviewed-state awareness, import dry-run, CSV BOM 호환성 개선 |
-| 최근 완료 | reviewed-state aware queue export, exclude-reviewed/unreviewed-only filtering, import dry-run, CSV UTF-8 BOM export/import를 구현하고 `python3 -m pytest` 47개 테스트 통과 |
-| 완료 조건 | export queue가 기존 latest feedback 상태를 표시/제외할 수 있고 bulk import dry-run 및 UTF-8 BOM CSV workflow를 지원함 |
+| 목표 | review queue prioritization 및 targeted re-review export workflow 개선 |
+| 최근 완료 | latest label/reviewer/session/tag 기반 re-review export, noisy query priority export, latest_note context, dry-run summary artifact를 구현하고 `python3 -m pytest` 50개 테스트 통과 |
+| 완료 조건 | export queue가 최신 human label/reviewer/session/tag/noisy query 기준으로 필터링 가능하고 dry-run import summary artifact를 생성할 수 있음 |
 
 ## Code Consistency Rules
 
@@ -57,7 +57,7 @@
 | Discovery Experiments | `src/ingestion/discovery/experiment.py`, `src/ingestion/discovery/calibration_compare.py` | rule config fingerprint와 source selection metadata를 review artifact에 기록하고 latest run 대비 decision/origin/classification/noisy query 변화를 JSON comparison artifact로 관리 |
 | Discovery Human Review | `src/ingestion/discovery/human_review.py`, `src/db/repositories/discovery_human_review_repository.py` | review item stable id 기반 수동 human_label feedback을 JSONL로 기록하고 auto-vs-human disagreement 및 tuning attention summary를 file-based report로 관리 |
 | Discovery Human Review CLI | `src/batch/human_review_append.py`, `src/batch/human_review_report.py` | local discovery review artifact와 feedback JSONL을 대상으로 수동 feedback append, latest-wins report 생성, compact summary 출력을 수행 |
-| Discovery Human Review Batch CLI | `src/batch/human_review_export.py`, `src/batch/human_review_import.py` | review artifact를 CSV/JSONL 라벨링 큐로 export하고 라벨링된 CSV/JSONL을 append-only human feedback JSONL로 bulk import. latest feedback 표시/제외, dry-run import, CSV BOM 호환을 지원 |
+| Discovery Human Review Batch CLI | `src/batch/human_review_export.py`, `src/batch/human_review_import.py` | review artifact를 CSV/JSONL 라벨링 큐로 export하고 라벨링된 CSV/JSONL을 append-only human feedback JSONL로 bulk import. latest feedback 표시/제외, re-review 필터, noisy query priority, dry-run summary, CSV BOM 호환을 지원 |
 
 ## Project Context
 

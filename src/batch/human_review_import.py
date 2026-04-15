@@ -27,6 +27,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--reviewer", default="")
     parser.add_argument("--session-tag", default="")
     parser.add_argument("--dry-run", action="store_true")
+    parser.add_argument("--summary-output", default="")
     args = parser.parse_args(argv)
 
     reviewed_at = args.reviewed_at or datetime.now().astimezone().isoformat()
@@ -40,6 +41,8 @@ def main(argv: list[str] | None = None) -> int:
         session_tag=args.session_tag,
         dry_run=args.dry_run,
     )
+    if args.summary_output:
+        write_summary(path=Path(args.summary_output), payload=result)
     action = "dry_run" if args.dry_run else "imported"
     print(
         f"{action} imported={result['imported_count']} "
@@ -107,6 +110,16 @@ def read_import_rows(*, path: Path, file_format: str) -> list[dict[str, Any]]:
         if isinstance(payload, dict):
             rows.append(payload)
     return rows
+
+
+def write_summary(*, path: Path, payload: dict[str, Any]) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    temp_path = path.with_name(f".{path.name}.tmp")
+    temp_path.write_text(
+        json.dumps(payload, ensure_ascii=False, indent=2, sort_keys=True),
+        encoding="utf-8",
+    )
+    temp_path.replace(path)
 
 
 if __name__ == "__main__":

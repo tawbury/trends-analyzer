@@ -80,6 +80,7 @@ class HumanReviewImportExportTest(unittest.TestCase):
             HumanReviewFeedback(
                 item_ref=reviewed_item.review_item_id,
                 human_label="drop",
+                note="Alias was too broad",
                 rule_feedback_tag="alias_noise",
                 reviewed_at="2026-04-15T18:05:00+09:00",
                 reviewer="operator-a",
@@ -95,6 +96,7 @@ class HumanReviewImportExportTest(unittest.TestCase):
         self.assertEqual(rows[0]["already_reviewed"], "true")
         self.assertEqual(rows[0]["latest_human_label"], "drop")
         self.assertEqual(rows[0]["latest_rule_feedback_tag"], "alias_noise")
+        self.assertEqual(rows[0]["latest_note"], "Alias was too broad")
         self.assertEqual(rows[0]["latest_reviewer"], "operator-a")
         self.assertEqual(rows[1]["already_reviewed"], "false")
 
@@ -106,6 +108,77 @@ class HumanReviewImportExportTest(unittest.TestCase):
 
         self.assertEqual(len(unresolved_rows), 1)
         self.assertEqual(unresolved_rows[0]["review_item_id"], unresolved_item.review_item_id)
+
+    def test_build_review_queue_rows_supports_rereview_filters_and_noisy_priority(self) -> None:
+        alias_item = _review_item(
+            symbol="005930",
+            query="삼전",
+            query_origin="alias",
+            classification="stock",
+            decision="weak_keep",
+            suspicious=False,
+        )
+        keyword_item = _review_item(
+            symbol="069500",
+            query="ETF",
+            query_origin="query_keyword",
+            classification="etf",
+            decision="drop",
+            suspicious=False,
+        )
+        keep_item = _review_item(
+            symbol="000660",
+            query="SK하이닉스",
+            query_origin="korean_name",
+            classification="stock",
+            decision="keep",
+            suspicious=False,
+        )
+        feedback = latest_feedback_by_item_ref(
+            [
+                HumanReviewFeedback(
+                    item_ref=alias_item.review_item_id,
+                    human_label="drop",
+                    rule_feedback_tag="alias_noise",
+                    reviewed_at="2026-04-15T18:05:00+09:00",
+                    reviewer="operator-a",
+                    session_tag="session-1",
+                ),
+                HumanReviewFeedback(
+                    item_ref=keep_item.review_item_id,
+                    human_label="keep",
+                    reviewed_at="2026-04-15T18:06:00+09:00",
+                    reviewer="operator-b",
+                    session_tag="session-2",
+                ),
+            ]
+        )
+        payload = _review_payload([alias_item, keyword_item, keep_item])
+        payload["calibration_summary"] = {
+            "noisy_query_sample": ["ETF"],
+            "noisy_alias_sample": ["삼전"],
+        }
+
+        reviewed_drop_rows = build_review_queue_rows(
+            review_payload=payload,
+            latest_feedback_by_ref=feedback,
+            reviewed_only=True,
+            latest_human_label="drop",
+            latest_reviewer="operator-a",
+            latest_session_tag="session-1",
+            latest_rule_feedback_tag="alias_noise",
+        )
+        noisy_rows = build_review_queue_rows(
+            review_payload=payload,
+            latest_feedback_by_ref=feedback,
+            noisy_query_only=True,
+        )
+
+        self.assertEqual([row["review_item_id"] for row in reviewed_drop_rows], [alias_item.review_item_id])
+        self.assertEqual(
+            [row["query"] for row in noisy_rows],
+            ["삼전", "ETF"],
+        )
 
     def test_export_cli_writes_csv_and_jsonl(self) -> None:
         temp_dir = TemporaryDirectory()
@@ -219,6 +292,82 @@ class HumanReviewImportExportTest(unittest.TestCase):
             rows = list(csv.DictReader(file))
         self.assertEqual(len(rows), 1)
         self.assertEqual(rows[0]["review_item_id"], unresolved_item.review_item_id)
+
+    def test_export_cli_supports_priority_and_latest_feedback_filters(self) -> None:
+        temp_dir = TemporaryDirectory()
+        self.addCleanup(temp_dir.cleanup)
+        directory = Path(temp_dir.name)
+        reviewed_drop = _review_item(
+            symbol="005930",
+            query="삼전",
+            query_origin="alias",
+            classification="stock",
+            decision="weak_keep",
+            suspicious=False,
+        )
+        reviewed_keep = _review_item(
+            symbol="000660",
+            query="SK하이닉스",
+            query_origin="korean_name",
+            classification="stock",
+            decision="keep",
+            suspicious=False,
+        )
+        (directory / "latest_naver_news_review.json").write_text(
+            json.dumps(_review_payload([reviewed_drop, reviewed_keep]), ensure_ascii=False),
+            encoding="utf-8",
+        )
+        repository = JsonlDiscoveryHumanReviewRepository(directory=directory)
+        repository.append_feedback_sync(
+            provider="naver_news",
+            feedback=HumanReviewFeedback(
+                item_ref=reviewed_drop.review_item_id,
+                human_label="drop",
+                rule_feedback_tag="alias_noise",
+                reviewed_at="2026-04-15T18:00:00+09:00",
+                reviewer="operator-a",
+                session_tag="session-1",
+            ),
+        )
+        repository.append_feedback_sync(
+            provider="naver_news",
+            feedback=HumanReviewFeedback(
+                item_ref=reviewed_keep.review_item_id,
+                human_label="keep",
+                reviewed_at="2026-04-15T18:01:00+09:00",
+                reviewer="operator-b",
+                session_tag="session-2",
+            ),
+        )
+        output_path = directory / "rereview.csv"
+
+        with redirect_stdout(io.StringIO()):
+            exit_code = export_main(
+                [
+                    "--directory",
+                    str(directory),
+                    "--output",
+                    str(output_path),
+                    "--format",
+                    "csv",
+                    "--reviewed-only",
+                    "--latest-human-label",
+                    "drop",
+                    "--latest-reviewer",
+                    "operator-a",
+                    "--latest-session-tag",
+                    "session-1",
+                    "--latest-rule-feedback-tag",
+                    "alias_noise",
+                ]
+            )
+
+        self.assertEqual(exit_code, 0)
+        with output_path.open("r", encoding="utf-8", newline="") as file:
+            rows = list(csv.DictReader(file))
+        self.assertEqual(len(rows), 1)
+        self.assertEqual(rows[0]["review_item_id"], reviewed_drop.review_item_id)
+
 
     def test_import_feedback_rows_counts_imported_skipped_and_invalid(self) -> None:
         temp_dir = TemporaryDirectory()
@@ -367,6 +516,39 @@ class HumanReviewImportExportTest(unittest.TestCase):
         self.assertIn("dry_run imported=1 skipped=0 invalid=1", output.getvalue())
         repository = JsonlDiscoveryHumanReviewRepository(directory=directory)
         self.assertEqual(repository.list_feedback_sync(provider="naver_news"), [])
+
+    def test_import_cli_dry_run_can_write_summary_artifact(self) -> None:
+        temp_dir = TemporaryDirectory()
+        self.addCleanup(temp_dir.cleanup)
+        directory = Path(temp_dir.name)
+        input_path = directory / "labeled.csv"
+        summary_path = directory / "dry_run_summary.json"
+        with input_path.open("w", encoding="utf-8", newline="") as file:
+            writer = csv.DictWriter(file, fieldnames=["review_item_id", "human_label"])
+            writer.writeheader()
+            writer.writerow({"review_item_id": "item-1", "human_label": "drop"})
+            writer.writerow({"review_item_id": "item-2", "human_label": ""})
+
+        with redirect_stdout(io.StringIO()):
+            exit_code = import_main(
+                [
+                    "--directory",
+                    str(directory),
+                    "--input",
+                    str(input_path),
+                    "--format",
+                    "csv",
+                    "--dry-run",
+                    "--summary-output",
+                    str(summary_path),
+                ]
+            )
+
+        self.assertEqual(exit_code, 0)
+        summary = json.loads(summary_path.read_text(encoding="utf-8"))
+        self.assertTrue(summary["dry_run"])
+        self.assertEqual(summary["imported_count"], 1)
+        self.assertEqual(summary["skipped_count"], 1)
 
 
 def _review_item(
