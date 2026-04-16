@@ -180,6 +180,136 @@ class HumanReviewImportExportTest(unittest.TestCase):
             ["삼전", "ETF"],
         )
 
+    def test_build_review_queue_rows_uses_human_report_disagreement_presets(self) -> None:
+        alias_item = _review_item(
+            symbol="005930",
+            query="삼전",
+            query_origin="alias",
+            classification="stock",
+            decision="weak_keep",
+            suspicious=False,
+        )
+        etf_item = _review_item(
+            symbol="069500",
+            query="ETF",
+            query_origin="query_keyword",
+            classification="etf",
+            decision="drop",
+            suspicious=False,
+        )
+        payload = _review_payload([alias_item, etf_item])
+        report = {
+            "per_origin_disagreement_counts": {
+                "alias": {
+                    "disagreement": 3,
+                    "reviewed": 4,
+                    "disagreement_rate": 0.75,
+                },
+                "query_keyword": {
+                    "disagreement": 1,
+                    "reviewed": 4,
+                    "disagreement_rate": 0.25,
+                },
+            },
+            "per_classification_disagreement_counts": {
+                "etf": {
+                    "disagreement": 2,
+                    "reviewed": 3,
+                    "disagreement_rate": 0.6667,
+                }
+            },
+            "repeated_query_disagreements": [["ETF", 2]],
+        }
+
+        origin_rows = build_review_queue_rows(
+            review_payload=payload,
+            human_review_report=report,
+            disagreement_preset="disagreement_origin",
+            min_disagreement_count=2,
+            min_disagreement_rate=0.5,
+        )
+        classification_rows = build_review_queue_rows(
+            review_payload=payload,
+            human_review_report=report,
+            disagreement_preset="disagreement_classification",
+            min_disagreement_count=2,
+            min_disagreement_rate=0.5,
+        )
+        query_rows = build_review_queue_rows(
+            review_payload=payload,
+            human_review_report=report,
+            disagreement_preset="repeated_query_disagreement",
+            min_query_disagreement_count=2,
+        )
+
+        self.assertEqual([row["review_item_id"] for row in origin_rows], [alias_item.review_item_id])
+        self.assertEqual(origin_rows[0]["rereview_reason"], "origin_disagreement")
+        self.assertEqual(origin_rows[0]["disagreement_scope"], "origin:alias")
+        self.assertEqual(
+            [row["review_item_id"] for row in classification_rows],
+            [etf_item.review_item_id],
+        )
+        self.assertEqual(classification_rows[0]["rereview_reason"], "classification_disagreement")
+        self.assertEqual([row["review_item_id"] for row in query_rows], [etf_item.review_item_id])
+        self.assertEqual(query_rows[0]["disagreement_scope"], "query:ETF")
+
+    def test_build_review_queue_rows_supports_false_keep_and_false_drop_focus(self) -> None:
+        false_keep_item = _review_item(
+            symbol="005930",
+            query="삼전",
+            query_origin="alias",
+            classification="stock",
+            decision="weak_keep",
+            suspicious=False,
+        )
+        false_drop_item = _review_item(
+            symbol="069500",
+            query="ETF",
+            query_origin="query_keyword",
+            classification="etf",
+            decision="drop",
+            suspicious=False,
+        )
+        feedback = latest_feedback_by_item_ref(
+            [
+                HumanReviewFeedback(
+                    item_ref=false_keep_item.review_item_id,
+                    human_label="drop",
+                    reviewed_at="2026-04-15T18:05:00+09:00",
+                ),
+                HumanReviewFeedback(
+                    item_ref=false_drop_item.review_item_id,
+                    human_label="weak_keep",
+                    reviewed_at="2026-04-15T18:06:00+09:00",
+                ),
+            ]
+        )
+        payload = _review_payload([false_keep_item, false_drop_item])
+
+        false_keep_rows = build_review_queue_rows(
+            review_payload=payload,
+            latest_feedback_by_ref=feedback,
+            human_review_report={"error_counts": {"false_keep": 1}},
+            disagreement_preset="false_keep_focus",
+        )
+        false_drop_rows = build_review_queue_rows(
+            review_payload=payload,
+            latest_feedback_by_ref=feedback,
+            human_review_report={"error_counts": {"false_drop": 1}},
+            disagreement_preset="false_drop_focus",
+        )
+
+        self.assertEqual(
+            [row["review_item_id"] for row in false_keep_rows],
+            [false_keep_item.review_item_id],
+        )
+        self.assertEqual(false_keep_rows[0]["rereview_reason"], "false_keep_focus")
+        self.assertEqual(
+            [row["review_item_id"] for row in false_drop_rows],
+            [false_drop_item.review_item_id],
+        )
+        self.assertEqual(false_drop_rows[0]["rereview_reason"], "false_drop_focus")
+
     def test_export_cli_writes_csv_and_jsonl(self) -> None:
         temp_dir = TemporaryDirectory()
         self.addCleanup(temp_dir.cleanup)
@@ -368,6 +498,74 @@ class HumanReviewImportExportTest(unittest.TestCase):
         self.assertEqual(len(rows), 1)
         self.assertEqual(rows[0]["review_item_id"], reviewed_drop.review_item_id)
 
+    def test_export_cli_supports_disagreement_report_preset(self) -> None:
+        temp_dir = TemporaryDirectory()
+        self.addCleanup(temp_dir.cleanup)
+        directory = Path(temp_dir.name)
+        alias_item = _review_item(
+            symbol="005930",
+            query="삼전",
+            query_origin="alias",
+            classification="stock",
+            decision="weak_keep",
+            suspicious=False,
+        )
+        other_item = _review_item(
+            symbol="000660",
+            query="SK하이닉스",
+            query_origin="korean_name",
+            classification="stock",
+            decision="keep",
+            suspicious=False,
+        )
+        (directory / "latest_naver_news_review.json").write_text(
+            json.dumps(_review_payload([alias_item, other_item]), ensure_ascii=False),
+            encoding="utf-8",
+        )
+        report_path = directory / "latest_naver_news_human_review_report.json"
+        report_path.write_text(
+            json.dumps(
+                {
+                    "per_origin_disagreement_counts": {
+                        "alias": {
+                            "disagreement": 2,
+                            "reviewed": 3,
+                            "disagreement_rate": 0.6667,
+                        }
+                    },
+                    "per_classification_disagreement_counts": {},
+                    "repeated_query_disagreements": [],
+                },
+                ensure_ascii=False,
+            ),
+            encoding="utf-8",
+        )
+        output_path = directory / "disagreement_origin.csv"
+
+        with redirect_stdout(io.StringIO()):
+            exit_code = export_main(
+                [
+                    "--directory",
+                    str(directory),
+                    "--output",
+                    str(output_path),
+                    "--format",
+                    "csv",
+                    "--disagreement-preset",
+                    "disagreement_origin",
+                    "--min-disagreement-count",
+                    "2",
+                    "--min-disagreement-rate",
+                    "0.5",
+                ]
+            )
+
+        self.assertEqual(exit_code, 0)
+        with output_path.open("r", encoding="utf-8", newline="") as file:
+            rows = list(csv.DictReader(file))
+        self.assertEqual(len(rows), 1)
+        self.assertEqual(rows[0]["review_item_id"], alias_item.review_item_id)
+        self.assertEqual(rows[0]["rereview_reason"], "origin_disagreement")
 
     def test_import_feedback_rows_counts_imported_skipped_and_invalid(self) -> None:
         temp_dir = TemporaryDirectory()

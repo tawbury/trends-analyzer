@@ -33,6 +33,11 @@ def main(argv: list[str] | None = None) -> int:
         default="",
         help="Review artifact path. Defaults to latest_{provider}_review.json in directory",
     )
+    parser.add_argument(
+        "--human-review-report-path",
+        default="",
+        help="Human review report path. Defaults to latest_{provider}_human_review_report.json when a disagreement preset is used",
+    )
     parser.add_argument("--output", required=True)
     parser.add_argument("--format", choices=["csv", "jsonl"], default="csv")
     parser.add_argument("--max-items", type=int, default=0)
@@ -53,6 +58,21 @@ def main(argv: list[str] | None = None) -> int:
         choices=["", "weak_keep", "suspicious", "noisy", "reviewed_drop", "reviewed_weak_keep"],
         default="",
     )
+    parser.add_argument(
+        "--disagreement-preset",
+        choices=[
+            "",
+            "disagreement_origin",
+            "disagreement_classification",
+            "repeated_query_disagreement",
+            "false_keep_focus",
+            "false_drop_focus",
+        ],
+        default="",
+    )
+    parser.add_argument("--min-disagreement-count", type=int, default=1)
+    parser.add_argument("--min-disagreement-rate", type=float, default=0.0)
+    parser.add_argument("--min-query-disagreement-count", type=int, default=2)
     parser.add_argument("--csv-bom", action="store_true")
     args = parser.parse_args(argv)
 
@@ -66,9 +86,18 @@ def main(argv: list[str] | None = None) -> int:
     latest_feedback_by_ref = latest_feedback_by_item_ref(
         repository.list_feedback_sync(provider=args.provider)
     )
+    human_review_report = None
+    if args.disagreement_preset:
+        report_path = (
+            Path(args.human_review_report_path)
+            if args.human_review_report_path
+            else directory / f"latest_{args.provider}_human_review_report.json"
+        )
+        human_review_report = load_review_artifact(report_path)
     rows = build_review_queue_rows(
         review_payload=load_review_artifact(review_path),
         latest_feedback_by_ref=latest_feedback_by_ref,
+        human_review_report=human_review_report,
         max_items=args.max_items,
         discovery_decision=args.discovery_decision or _priority_discovery_decision(args.priority),
         query_origin=args.query_origin,
@@ -82,6 +111,10 @@ def main(argv: list[str] | None = None) -> int:
         latest_session_tag=args.latest_session_tag,
         latest_rule_feedback_tag=args.latest_rule_feedback_tag,
         noisy_query_only=args.noisy_query_only or args.priority == "noisy",
+        disagreement_preset=args.disagreement_preset,
+        min_disagreement_count=args.min_disagreement_count,
+        min_disagreement_rate=args.min_disagreement_rate,
+        min_query_disagreement_count=args.min_query_disagreement_count,
     )
     output_path = Path(args.output)
     if args.format == "csv":
@@ -96,6 +129,7 @@ def build_review_queue_rows(
     *,
     review_payload: dict[str, Any],
     latest_feedback_by_ref: dict[str, HumanReviewFeedback] | None = None,
+    human_review_report: dict[str, Any] | None = None,
     max_items: int = 0,
     discovery_decision: str = "",
     query_origin: str = "",
@@ -108,9 +142,20 @@ def build_review_queue_rows(
     latest_session_tag: str = "",
     latest_rule_feedback_tag: str = "",
     noisy_query_only: bool = False,
+    disagreement_preset: str = "",
+    min_disagreement_count: int = 1,
+    min_disagreement_rate: float = 0.0,
+    min_query_disagreement_count: int = 2,
 ) -> list[dict[str, str]]:
     feedback_by_ref = latest_feedback_by_ref or {}
     noisy_queries = _noisy_queries(review_payload)
+    disagreement_signal = _build_disagreement_signal(
+        report=human_review_report,
+        preset=disagreement_preset,
+        min_disagreement_count=min_disagreement_count,
+        min_disagreement_rate=min_disagreement_rate,
+        min_query_disagreement_count=min_query_disagreement_count,
+    )
     items = review_payload.get("items")
     if not isinstance(items, list):
         return []
@@ -130,6 +175,11 @@ def build_review_queue_rows(
             continue
         item_ref = str(item.get("review_item_id") or build_review_item_id(item))
         row = review_item_to_queue_row(item, latest_feedback=feedback_by_ref.get(item_ref))
+        if disagreement_preset:
+            reason = _disagreement_reason(item=item, row=row, signal=disagreement_signal)
+            if reason is None:
+                continue
+            row.update(reason)
         if exclude_reviewed and row["already_reviewed"] == "true":
             continue
         if reviewed_only and row["already_reviewed"] != "true":
@@ -170,6 +220,125 @@ def latest_feedback_by_item_ref(
 ) -> dict[str, HumanReviewFeedback]:
     latest_feedback, _ = resolve_latest_feedback(feedback_items)
     return {feedback.item_ref: feedback for feedback in latest_feedback}
+
+
+def _build_disagreement_signal(
+    *,
+    report: dict[str, Any] | None,
+    preset: str,
+    min_disagreement_count: int,
+    min_disagreement_rate: float,
+    min_query_disagreement_count: int,
+) -> dict[str, Any]:
+    if not preset:
+        return {}
+    if report is None:
+        raise ValueError("Human review report is required for disagreement-aware export")
+    return {
+        "preset": preset,
+        "origins": _disagreement_keys(
+            report.get("per_origin_disagreement_counts"),
+            min_count=min_disagreement_count,
+            min_rate=min_disagreement_rate,
+        ),
+        "classifications": _disagreement_keys(
+            report.get("per_classification_disagreement_counts"),
+            min_count=min_disagreement_count,
+            min_rate=min_disagreement_rate,
+        ),
+        "queries": _repeated_disagreement_queries(
+            report.get("repeated_query_disagreements"),
+            min_count=min_query_disagreement_count,
+        ),
+    }
+
+
+def _disagreement_keys(
+    values: Any,
+    *,
+    min_count: int,
+    min_rate: float,
+) -> dict[str, str]:
+    if not isinstance(values, dict):
+        return {}
+    result: dict[str, str] = {}
+    for key, payload in values.items():
+        if not isinstance(payload, dict):
+            continue
+        count = int(payload.get("disagreement") or 0)
+        rate = float(payload.get("disagreement_rate") or 0.0)
+        if count >= min_count and rate >= min_rate:
+            result[str(key)] = f"disagreement={count};rate={rate}"
+    return result
+
+
+def _repeated_disagreement_queries(values: Any, *, min_count: int) -> dict[str, str]:
+    if not isinstance(values, list):
+        return {}
+    result: dict[str, str] = {}
+    for value in values:
+        query = ""
+        count = 0
+        if isinstance(value, dict):
+            query = str(value.get("query") or "")
+            count = int(value.get("count") or 0)
+        elif isinstance(value, (list, tuple)) and len(value) >= 2:
+            query = str(value[0])
+            count = int(value[1])
+        if query and count >= min_count:
+            result[query] = f"disagreement={count}"
+    return result
+
+
+def _disagreement_reason(
+    *,
+    item: dict[str, Any],
+    row: dict[str, str],
+    signal: dict[str, Any],
+) -> dict[str, str] | None:
+    preset = str(signal.get("preset") or "")
+    if preset == "disagreement_origin":
+        origin = str(item.get("query_origin") or "")
+        metric = signal["origins"].get(origin)
+        if metric:
+            return _reason("origin_disagreement", f"origin:{origin}", metric)
+    if preset == "disagreement_classification":
+        classification = str(item.get("classification") or "")
+        metric = signal["classifications"].get(classification)
+        if metric:
+            return _reason(
+                "classification_disagreement",
+                f"classification:{classification}",
+                metric,
+            )
+    if preset == "repeated_query_disagreement":
+        query = str(item.get("query") or "")
+        metric = signal["queries"].get(query)
+        if metric:
+            return _reason("repeated_query_disagreement", f"query:{query}", metric)
+    if preset == "false_keep_focus":
+        if row["latest_human_label"] == "drop" and row["discovery_decision"] != "drop":
+            return _reason(
+                "false_keep_focus",
+                "error:false_keep",
+                "auto_keep_or_weak_keep;human_drop",
+            )
+    if preset == "false_drop_focus":
+        if row["latest_human_label"] in {"keep", "weak_keep"} and row["discovery_decision"] == "drop":
+            return _reason(
+                "false_drop_focus",
+                "error:false_drop",
+                "auto_drop;human_keep_or_weak_keep",
+            )
+    return None
+
+
+def _reason(reason: str, scope: str, metric: str) -> dict[str, str]:
+    return {
+        "rereview_reason": reason,
+        "disagreement_scope": scope,
+        "disagreement_metric": metric,
+    }
 
 
 def _noisy_queries(review_payload: dict[str, Any]) -> set[str]:
