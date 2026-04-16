@@ -1221,6 +1221,19 @@ class HumanReviewImportExportTest(unittest.TestCase):
             comparison["metadata_comparison"]["filter_differences"]["min_disagreement_count"],
             {"current": 2, "previous": 1},
         )
+        hint_types = {hint["type"] for hint in comparison["interpretation_hints"]}
+        self.assertIn("noise_or_suspicious_focus_increased", hint_types)
+        self.assertIn("repeated_query_disagreement_emphasis_increased", hint_types)
+        self.assertIn("queue_became_more_reviewed_heavy", hint_types)
+        self.assertIn("filters_changed", hint_types)
+        self.assertIn(
+            "Review noisy/suspicious rows separately from relevance recovery rows.",
+            comparison["strategy_notes"],
+        )
+        self.assertIn(
+            "Inspect repeated query terms before changing broad origin or classification thresholds.",
+            comparison["strategy_notes"],
+        )
 
     def test_export_cli_queue_summary_comparison_handles_missing_previous(self) -> None:
         temp_dir = TemporaryDirectory()
