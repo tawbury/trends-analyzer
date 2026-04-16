@@ -36,6 +36,23 @@ QUEUE_SIGNALS = {
     "weak_keep",
     "suspicious",
     "noisy",
+    "reviewed_drop",
+    "reviewed_weak_keep",
+}
+PRIORITY_WEIGHTS = {
+    "false_keep_focus": 100,
+    "false_drop_focus": 100,
+    "repeated_query_disagreement": 75,
+    "assist_repeated_query_disagreement": 70,
+    "origin_disagreement": 60,
+    "classification_disagreement": 60,
+    "assist_origin_high_disagreement": 55,
+    "assist_classification_high_disagreement": 55,
+    "suspicious_focus": 40,
+    "reviewed_drop_focus": 35,
+    "noisy_query_focus": 30,
+    "reviewed_weak_keep_focus": 25,
+    "weak_keep_focus": 20,
 }
 
 
@@ -103,7 +120,8 @@ def main(argv: list[str] | None = None) -> int:
         default=[],
         help=(
             "Review artifact signal to OR with report-driven presets. "
-            "Repeat the flag or use comma-separated values. Allowed: weak_keep, suspicious, noisy"
+            "Repeat the flag or use comma-separated values. "
+            "Allowed: weak_keep, suspicious, noisy, reviewed_drop, reviewed_weak_keep"
         ),
     )
     parser.add_argument("--min-disagreement-count", type=int, default=1)
@@ -164,7 +182,7 @@ def main(argv: list[str] | None = None) -> int:
         noisy_query_only=args.noisy_query_only or args.priority == "noisy",
         disagreement_preset=disagreement_presets,
         assist_preset=assist_presets,
-        queue_signal=queue_signals,
+        queue_signal=queue_signals + _priority_queue_signals(args.priority),
         min_disagreement_count=args.min_disagreement_count,
         min_disagreement_rate=args.min_disagreement_rate,
         min_query_disagreement_count=args.min_query_disagreement_count,
@@ -236,7 +254,12 @@ def build_review_queue_rows(
         item_ref = str(item.get("review_item_id") or build_review_item_id(item))
         row = review_item_to_queue_row(item, latest_feedback=feedback_by_ref.get(item_ref))
         if multi_signal_active:
-            reasons = _queue_signal_reasons(item=item, noisy_queries=noisy_queries, signals=queue_signals)
+            reasons = _queue_signal_reasons(
+                item=item,
+                row=row,
+                noisy_queries=noisy_queries,
+                signals=queue_signals,
+            )
             reasons.extend(_disagreement_reasons(item=item, row=row, signal=disagreement_signal))
             if not reasons:
                 continue
@@ -254,8 +277,9 @@ def build_review_queue_rows(
         if latest_rule_feedback_tag and row["latest_rule_feedback_tag"] != latest_rule_feedback_tag:
             continue
         rows.append(row)
-        if max_items > 0 and len(rows) >= max_items:
-            break
+    rows.sort(key=_queue_row_sort_key)
+    if max_items > 0:
+        return rows[:max_items]
     return rows
 
 
@@ -472,6 +496,7 @@ def _disagreement_reasons(
 def _queue_signal_reasons(
     *,
     item: dict[str, Any],
+    row: dict[str, str],
     noisy_queries: set[str],
     signals: list[str],
 ) -> list[dict[str, str]]:
@@ -484,24 +509,50 @@ def _queue_signal_reasons(
     query = str(item.get("query") or "")
     if "noisy" in signal_set and query in noisy_queries:
         reasons.append(_reason("noisy_query_focus", f"query:{query}", "noisy_query_sample=true"))
+    if "reviewed_drop" in signal_set and row["latest_human_label"] == "drop":
+        reasons.append(_reason("reviewed_drop_focus", "human_label:drop", "latest_human_drop=true"))
+    if "reviewed_weak_keep" in signal_set and row["latest_human_label"] == "weak_keep":
+        reasons.append(
+            _reason(
+                "reviewed_weak_keep_focus",
+                "human_label:weak_keep",
+                "latest_human_weak_keep=true",
+            )
+        )
     return reasons
 
 
 def _combine_reasons(reasons: list[dict[str, str]]) -> dict[str, str]:
+    matched_signals = _unique_values(reason["rereview_reason"] for reason in reasons)
     return {
-        "rereview_reason": _join_unique(reason["rereview_reason"] for reason in reasons),
-        "disagreement_scope": _join_unique(reason["disagreement_scope"] for reason in reasons),
-        "disagreement_metric": _join_unique(reason["disagreement_metric"] for reason in reasons),
+        "priority_score": str(_priority_score(matched_signals)),
+        "reason_count": str(len(matched_signals)),
+        "matched_signals": ";".join(matched_signals),
+        "rereview_reason": ";".join(matched_signals),
+        "disagreement_scope": ";".join(
+            _unique_values(reason["disagreement_scope"] for reason in reasons)
+        ),
+        "disagreement_metric": ";".join(
+            _unique_values(reason["disagreement_metric"] for reason in reasons)
+        ),
     }
 
 
-def _join_unique(values: Any) -> str:
+def _unique_values(values: Any) -> list[str]:
     result: list[str] = []
     for value in values:
         text = str(value or "")
         if text and text not in result:
             result.append(text)
-    return ";".join(result)
+    return result
+
+
+def _priority_score(signals: list[str]) -> int:
+    return sum(PRIORITY_WEIGHTS.get(signal, 0) for signal in signals)
+
+
+def _queue_row_sort_key(row: dict[str, str]) -> int:
+    return -int(row.get("priority_score") or 0)
 
 
 def _reason(reason: str, scope: str, metric: str) -> dict[str, str]:
@@ -536,6 +587,12 @@ def _priority_latest_human_label(priority: str) -> str:
     if priority == "reviewed_weak_keep":
         return "weak_keep"
     return ""
+
+
+def _priority_queue_signals(priority: str) -> list[str]:
+    if priority in QUEUE_SIGNALS:
+        return [priority]
+    return []
 
 
 def _parse_signal_values(

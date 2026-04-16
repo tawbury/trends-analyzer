@@ -296,10 +296,12 @@ class HumanReviewImportExportTest(unittest.TestCase):
 
         self.assertEqual(
             [row["review_item_id"] for row in rows],
-            [alias_item.review_item_id, etf_item.review_item_id],
+            [etf_item.review_item_id, alias_item.review_item_id],
         )
-        self.assertEqual(rows[0]["rereview_reason"], "origin_disagreement")
-        self.assertEqual(rows[1]["rereview_reason"], "repeated_query_disagreement")
+        self.assertEqual(rows[0]["rereview_reason"], "repeated_query_disagreement")
+        self.assertEqual(rows[0]["priority_score"], "75")
+        self.assertEqual(rows[1]["rereview_reason"], "origin_disagreement")
+        self.assertEqual(rows[1]["priority_score"], "60")
 
     def test_build_review_queue_rows_combines_assist_and_error_reasons(self) -> None:
         alias_item = _review_item(
@@ -344,6 +346,9 @@ class HumanReviewImportExportTest(unittest.TestCase):
             rows[0]["rereview_reason"],
             "assist_origin_high_disagreement;false_keep_focus",
         )
+        self.assertEqual(rows[0]["matched_signals"], "assist_origin_high_disagreement;false_keep_focus")
+        self.assertEqual(rows[0]["reason_count"], "2")
+        self.assertEqual(rows[0]["priority_score"], "155")
         self.assertEqual(
             rows[0]["disagreement_scope"],
             "origin:alias;error:false_keep",
@@ -386,10 +391,62 @@ class HumanReviewImportExportTest(unittest.TestCase):
 
         self.assertEqual(
             [row["review_item_id"] for row in rows],
-            [suspicious_item.review_item_id, false_drop_item.review_item_id],
+            [false_drop_item.review_item_id, suspicious_item.review_item_id],
         )
-        self.assertEqual(rows[0]["rereview_reason"], "suspicious_focus")
-        self.assertEqual(rows[1]["rereview_reason"], "false_drop_focus")
+        self.assertEqual(rows[0]["rereview_reason"], "false_drop_focus")
+        self.assertEqual(rows[0]["priority_score"], "100")
+        self.assertEqual(rows[1]["rereview_reason"], "suspicious_focus")
+        self.assertEqual(rows[1]["priority_score"], "40")
+
+    def test_build_review_queue_rows_sorts_by_priority_before_max_items(self) -> None:
+        weak_item = _review_item(
+            symbol="005930",
+            query="삼전",
+            query_origin="alias",
+            classification="stock",
+            decision="weak_keep",
+            suspicious=False,
+        )
+        suspicious_item = _review_item(
+            symbol="000660",
+            query="SK하이닉스",
+            query_origin="korean_name",
+            classification="stock",
+            decision="keep",
+            suspicious=True,
+        )
+        false_drop_item = _review_item(
+            symbol="069500",
+            query="ETF",
+            query_origin="query_keyword",
+            classification="etf",
+            decision="drop",
+            suspicious=False,
+        )
+        feedback = latest_feedback_by_item_ref(
+            [
+                HumanReviewFeedback(
+                    item_ref=false_drop_item.review_item_id,
+                    human_label="keep",
+                    reviewed_at="2026-04-15T18:06:00+09:00",
+                ),
+            ]
+        )
+
+        rows = build_review_queue_rows(
+            review_payload=_review_payload([weak_item, suspicious_item, false_drop_item]),
+            latest_feedback_by_ref=feedback,
+            human_review_report={"error_counts": {"false_drop": 1}},
+            disagreement_preset="false_drop_focus",
+            queue_signal=["weak_keep", "suspicious"],
+            max_items=2,
+        )
+
+        self.assertEqual(
+            [row["review_item_id"] for row in rows],
+            [false_drop_item.review_item_id, suspicious_item.review_item_id],
+        )
+        self.assertEqual([row["priority_score"] for row in rows], ["100", "40"])
 
     def test_build_review_queue_rows_can_use_calibration_assist_hints(self) -> None:
         alias_item = _review_item(
@@ -910,13 +967,17 @@ class HumanReviewImportExportTest(unittest.TestCase):
             rows = list(csv.DictReader(file))
         self.assertEqual(
             [row["review_item_id"] for row in rows],
-            [alias_item.review_item_id, etf_item.review_item_id],
+            [etf_item.review_item_id, alias_item.review_item_id],
         )
-        self.assertEqual(rows[0]["rereview_reason"], "origin_disagreement")
+        self.assertEqual(rows[1]["rereview_reason"], "origin_disagreement")
+        self.assertEqual(rows[1]["priority_score"], "60")
         self.assertEqual(
-            rows[1]["rereview_reason"],
+            rows[0]["rereview_reason"],
             "suspicious_focus;repeated_query_disagreement",
         )
+        self.assertEqual(rows[0]["matched_signals"], "suspicious_focus;repeated_query_disagreement")
+        self.assertEqual(rows[0]["reason_count"], "2")
+        self.assertEqual(rows[0]["priority_score"], "115")
 
     def test_import_feedback_rows_counts_imported_skipped_and_invalid(self) -> None:
         temp_dir = TemporaryDirectory()
