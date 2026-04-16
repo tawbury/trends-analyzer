@@ -121,6 +121,10 @@ def compare_queue_summaries(
     comparison["interpretation_hints"] = _interpretation_hints(comparison)
     comparison["strategy_notes"] = _strategy_notes(comparison)
     comparison["recommended_actions"] = _recommended_actions(comparison["interpretation_hints"])
+    comparison["aggregated_recommended_actions"] = _aggregate_recommended_actions(
+        comparison["recommended_actions"]
+    )
+    comparison["top_recommended_actions"] = comparison["aggregated_recommended_actions"][:5]
     return comparison
 
 
@@ -462,6 +466,46 @@ def _recommended_actions(hints: list[dict[str, Any]]) -> list[dict[str, Any]]:
     return recommendations
 
 
+def _aggregate_recommended_actions(
+    recommendations: list[dict[str, Any]],
+) -> list[dict[str, Any]]:
+    aggregated: dict[str, dict[str, Any]] = {}
+    for recommendation in recommendations:
+        if not isinstance(recommendation, dict):
+            continue
+        hint_type = str(recommendation.get("hint_type") or "")
+        actions = recommendation.get("actions")
+        if not isinstance(actions, list):
+            continue
+        for action_payload in actions:
+            if not isinstance(action_payload, dict):
+                continue
+            action = str(action_payload.get("action") or "")
+            if not action:
+                continue
+            entry = aggregated.setdefault(
+                action,
+                {
+                    "action": action,
+                    "count": 0,
+                    "related_hint_types": [],
+                    "descriptions": [],
+                    "auto_apply": False,
+                },
+            )
+            entry["count"] += 1
+            if hint_type and hint_type not in entry["related_hint_types"]:
+                entry["related_hint_types"].append(hint_type)
+            description = str(action_payload.get("description") or "")
+            if description and description not in entry["descriptions"]:
+                entry["descriptions"].append(description)
+            entry["auto_apply"] = False
+    return sorted(
+        aggregated.values(),
+        key=lambda item: (-int(item["count"]), str(item["action"])),
+    )
+
+
 def _delta_value(values: dict[str, Any], key: str) -> int:
     payload = values.get(key)
     if not isinstance(payload, dict):
@@ -475,4 +519,3 @@ def _hint(*, hint_type: str, message: str, evidence: dict[str, Any]) -> dict[str
         "message": message,
         "evidence": evidence,
     }
-

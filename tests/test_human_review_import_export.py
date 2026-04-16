@@ -1246,6 +1246,21 @@ class HumanReviewImportExportTest(unittest.TestCase):
         self.assertFalse(
             comparison["recommended_actions"][0]["actions"][0]["auto_apply"],
         )
+        aggregated_actions = {
+            item["action"]: item
+            for item in comparison["aggregated_recommended_actions"]
+        }
+        self.assertEqual(aggregated_actions["extend_noise_term_list"]["count"], 1)
+        self.assertEqual(
+            aggregated_actions["extend_noise_term_list"]["related_hint_types"],
+            ["noise_or_suspicious_focus_increased"],
+        )
+        self.assertFalse(aggregated_actions["extend_noise_term_list"]["auto_apply"])
+        self.assertIn(
+            aggregated_actions["extend_noise_term_list"],
+            comparison["top_recommended_actions"],
+        )
+        self.assertEqual(len(comparison["recommended_actions"]), len(hint_types))
 
     def test_export_cli_queue_summary_comparison_handles_missing_previous(self) -> None:
         temp_dir = TemporaryDirectory()
