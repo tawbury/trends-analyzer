@@ -4,6 +4,63 @@ from datetime import datetime
 from typing import Any
 
 
+def _action(action: str, description: str) -> dict[str, Any]:
+    return {
+        "action": action,
+        "description": description,
+        "auto_apply": False,
+    }
+
+
+ACTION_TEMPLATES = {
+    "more_concentrated_high_priority_queue": [
+        _action("use_for_high_value_review_session", "Use this strategy for a smaller high-value re-review session."),
+        _action("inspect_top_priority_samples", "Inspect top_priority_row_samples before broad rollout."),
+        _action("keep_as_strategy_baseline", "Keep this summary as a baseline for the next strategy comparison."),
+    ],
+    "larger_queue_without_high_priority_gain": [
+        _action("tighten_presets_or_max_items", "Tighten presets or lower max_items if operator capacity is limited."),
+        _action("split_queue_by_signal", "Split the queue by matched_signals before assigning review work."),
+        _action("inspect_priority_distribution", "Inspect priority_score_buckets before using the larger queue."),
+    ],
+    "false_keep_focus_increased": [
+        _action("increase_alias_penalty", "Consider increasing alias origin penalty after inspecting false_keep samples."),
+        _action("tighten_query_keyword_threshold", "Consider tightening query_keyword thresholds for broad or noisy terms."),
+        _action("inspect_top_false_keep_samples", "Inspect top false_keep examples before changing discovery rules."),
+    ],
+    "false_drop_focus_increased": [
+        _action("relax_discovery_threshold", "Consider relaxing thresholds where humans repeatedly keep dropped items."),
+        _action("review_missed_relevant_samples", "Review missed relevant samples before relaxing rules globally."),
+        _action("inspect_threshold_overrides", "Inspect classification or origin threshold overrides for false_drop clusters."),
+    ],
+    "noise_or_suspicious_focus_increased": [
+        _action("extend_noise_term_list", "Consider extending noise terms after reviewing noisy/suspicious samples."),
+        _action("adjust_generic_noise_penalty", "Consider adjusting generic_noise_penalty for recurring low-quality matches."),
+        _action("review_suspicious_samples", "Review suspicious samples as a separate cleanup batch."),
+    ],
+    "repeated_query_disagreement_emphasis_increased": [
+        _action("review_query_generation_strategy", "Review query generation strategy for repeatedly disputed queries."),
+        _action("limit_low_quality_query_origins", "Consider limiting low-quality query origins for repeated disagreement terms."),
+        _action("inspect_repeated_query_terms", "Inspect repeated query terms before changing broad thresholds."),
+    ],
+    "queue_became_more_reviewed_heavy": [
+        _action("shift_to_unreviewed_sampling", "Shift part of the next queue to unreviewed sampling if coverage is the goal."),
+        _action("reduce_re_review_bias", "Reduce re-review bias by mixing in unresolved or unreviewed candidates."),
+        _action("cap_reviewed_only_exports", "Cap reviewed-only exports when operator capacity is limited."),
+    ],
+    "queue_became_more_unreviewed_heavy": [
+        _action("add_re_review_filters", "Add targeted re-review filters if calibration drift is the goal."),
+        _action("include_latest_human_label_focus", "Include latest_human_label filters for known disagreement classes."),
+        _action("sample_reviewed_disagreements", "Sample reviewed disagreements alongside unreviewed candidates."),
+    ],
+    "filters_changed": [
+        _action("verify_strategy_consistency", "Verify that queue strategy changes are intentional before comparing quality."),
+        _action("compare_with_same_filters", "Run a same-filter comparison if you need a cleaner strategy evaluation."),
+        _action("document_filter_change_reason", "Record why filters changed in the review session notes."),
+    ],
+}
+
+
 def compare_queue_summaries(
     *,
     current_summary: dict[str, Any],
@@ -63,7 +120,13 @@ def compare_queue_summaries(
     }
     comparison["interpretation_hints"] = _interpretation_hints(comparison)
     comparison["strategy_notes"] = _strategy_notes(comparison)
+    comparison["recommended_actions"] = _recommended_actions(comparison["interpretation_hints"])
     return comparison
+
+
+def map_hint_to_actions(hint: dict[str, Any]) -> list[dict[str, Any]]:
+    hint_type = str(hint.get("type") or "")
+    return ACTION_TEMPLATES.get(hint_type, [])
 
 
 def _numeric_delta(
@@ -382,6 +445,23 @@ def _strategy_notes(comparison: dict[str, Any]) -> list[str]:
     return notes
 
 
+def _recommended_actions(hints: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    recommendations: list[dict[str, Any]] = []
+    for hint in hints:
+        if not isinstance(hint, dict):
+            continue
+        actions = map_hint_to_actions(hint)
+        if not actions:
+            continue
+        recommendations.append(
+            {
+                "hint_type": str(hint.get("type") or ""),
+                "actions": actions,
+            }
+        )
+    return recommendations
+
+
 def _delta_value(values: dict[str, Any], key: str) -> int:
     payload = values.get(key)
     if not isinstance(payload, dict):
@@ -395,3 +475,4 @@ def _hint(*, hint_type: str, message: str, evidence: dict[str, Any]) -> dict[str
         "message": message,
         "evidence": evidence,
     }
+

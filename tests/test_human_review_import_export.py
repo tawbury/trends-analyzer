@@ -1234,6 +1234,18 @@ class HumanReviewImportExportTest(unittest.TestCase):
             "Inspect repeated query terms before changing broad origin or classification thresholds.",
             comparison["strategy_notes"],
         )
+        recommended_actions = {
+            action["action"]
+            for recommendation in comparison["recommended_actions"]
+            for action in recommendation["actions"]
+        }
+        self.assertIn("extend_noise_term_list", recommended_actions)
+        self.assertIn("review_query_generation_strategy", recommended_actions)
+        self.assertIn("shift_to_unreviewed_sampling", recommended_actions)
+        self.assertIn("verify_strategy_consistency", recommended_actions)
+        self.assertFalse(
+            comparison["recommended_actions"][0]["actions"][0]["auto_apply"],
+        )
 
     def test_export_cli_queue_summary_comparison_handles_missing_previous(self) -> None:
         temp_dir = TemporaryDirectory()
