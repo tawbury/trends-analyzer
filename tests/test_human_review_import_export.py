@@ -253,6 +253,75 @@ class HumanReviewImportExportTest(unittest.TestCase):
         self.assertEqual([row["review_item_id"] for row in query_rows], [etf_item.review_item_id])
         self.assertEqual(query_rows[0]["disagreement_scope"], "query:ETF")
 
+    def test_build_review_queue_rows_can_use_calibration_assist_hints(self) -> None:
+        alias_item = _review_item(
+            symbol="005930",
+            query="삼전",
+            query_origin="alias",
+            classification="stock",
+            decision="weak_keep",
+            suspicious=False,
+        )
+        etf_item = _review_item(
+            symbol="069500",
+            query="ETF",
+            query_origin="query_keyword",
+            classification="etf",
+            decision="drop",
+            suspicious=False,
+        )
+        payload = _review_payload([alias_item, etf_item])
+        report = {
+            "calibration_assist": [
+                {
+                    "type": "origin_high_disagreement",
+                    "origin": "alias",
+                    "disagreement": 3,
+                    "disagreement_rate": 0.75,
+                },
+                {
+                    "type": "classification_high_disagreement",
+                    "classification": "etf",
+                    "disagreement": 2,
+                    "disagreement_rate": 0.6667,
+                },
+                {
+                    "type": "repeated_query_disagreement",
+                    "query": "ETF",
+                    "count": 2,
+                },
+            ]
+        }
+
+        origin_rows = build_review_queue_rows(
+            review_payload=payload,
+            human_review_report=report,
+            assist_preset="origin_high_disagreement",
+        )
+        classification_rows = build_review_queue_rows(
+            review_payload=payload,
+            human_review_report=report,
+            assist_preset="classification_high_disagreement",
+        )
+        query_rows = build_review_queue_rows(
+            review_payload=payload,
+            human_review_report=report,
+            assist_preset="repeated_query_disagreement",
+        )
+
+        self.assertEqual([row["review_item_id"] for row in origin_rows], [alias_item.review_item_id])
+        self.assertEqual(origin_rows[0]["rereview_reason"], "assist_origin_high_disagreement")
+        self.assertEqual(
+            [row["review_item_id"] for row in classification_rows],
+            [etf_item.review_item_id],
+        )
+        self.assertEqual(
+            classification_rows[0]["rereview_reason"],
+            "assist_classification_high_disagreement",
+        )
+        self.assertEqual([row["review_item_id"] for row in query_rows], [etf_item.review_item_id])
+        self.assertEqual(query_rows[0]["rereview_reason"], "assist_repeated_query_disagreement")
+
     def test_build_review_queue_rows_supports_false_keep_and_false_drop_focus(self) -> None:
         false_keep_item = _review_item(
             symbol="005930",
@@ -566,6 +635,69 @@ class HumanReviewImportExportTest(unittest.TestCase):
         self.assertEqual(len(rows), 1)
         self.assertEqual(rows[0]["review_item_id"], alias_item.review_item_id)
         self.assertEqual(rows[0]["rereview_reason"], "origin_disagreement")
+
+    def test_export_cli_supports_assist_preset(self) -> None:
+        temp_dir = TemporaryDirectory()
+        self.addCleanup(temp_dir.cleanup)
+        directory = Path(temp_dir.name)
+        etf_item = _review_item(
+            symbol="069500",
+            query="ETF",
+            query_origin="query_keyword",
+            classification="etf",
+            decision="drop",
+            suspicious=False,
+        )
+        stock_item = _review_item(
+            symbol="005930",
+            query="삼성전자",
+            query_origin="korean_name",
+            classification="stock",
+            decision="keep",
+            suspicious=False,
+        )
+        (directory / "latest_naver_news_review.json").write_text(
+            json.dumps(_review_payload([etf_item, stock_item]), ensure_ascii=False),
+            encoding="utf-8",
+        )
+        (directory / "latest_naver_news_human_review_report.json").write_text(
+            json.dumps(
+                {
+                    "calibration_assist": [
+                        {
+                            "type": "classification_high_disagreement",
+                            "classification": "etf",
+                            "disagreement": 2,
+                            "disagreement_rate": 0.6667,
+                        }
+                    ]
+                },
+                ensure_ascii=False,
+            ),
+            encoding="utf-8",
+        )
+        output_path = directory / "assist.csv"
+
+        with redirect_stdout(io.StringIO()):
+            exit_code = export_main(
+                [
+                    "--directory",
+                    str(directory),
+                    "--output",
+                    str(output_path),
+                    "--format",
+                    "csv",
+                    "--assist-preset",
+                    "classification_high_disagreement",
+                ]
+            )
+
+        self.assertEqual(exit_code, 0)
+        with output_path.open("r", encoding="utf-8", newline="") as file:
+            rows = list(csv.DictReader(file))
+        self.assertEqual(len(rows), 1)
+        self.assertEqual(rows[0]["review_item_id"], etf_item.review_item_id)
+        self.assertEqual(rows[0]["rereview_reason"], "assist_classification_high_disagreement")
 
     def test_import_feedback_rows_counts_imported_skipped_and_invalid(self) -> None:
         temp_dir = TemporaryDirectory()

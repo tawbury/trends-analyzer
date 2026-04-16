@@ -147,6 +147,11 @@ def build_human_review_report(
     per_origin = _group_seed()
     per_classification = _group_seed()
     error_counts = {"false_keep": 0, "false_drop": 0, "weak_mismatch": 0}
+    error_samples: dict[str, list[dict[str, str]]] = {
+        "false_keep": [],
+        "false_drop": [],
+        "weak_mismatch": [],
+    }
     query_disagreements: dict[str, int] = {}
     tag_counts: dict[str, int] = {}
     reviewer_counts: dict[str, int] = {}
@@ -165,7 +170,15 @@ def build_human_review_report(
         else:
             disagreement_count += 1
             query_disagreements[query] = query_disagreements.get(query, 0) + 1
-            error_counts[_error_type(automatic_label, human_label)] += 1
+            error_type = _error_type(automatic_label, human_label)
+            error_counts[error_type] += 1
+            _append_error_sample(
+                error_samples[error_type],
+                item=item,
+                feedback=feedback,
+                automatic_label=automatic_label,
+                human_label=human_label,
+            )
             if feedback.rule_feedback_tag:
                 tag_counts[feedback.rule_feedback_tag] = (
                     tag_counts.get(feedback.rule_feedback_tag, 0) + 1
@@ -198,6 +211,7 @@ def build_human_review_report(
         "per_origin_disagreement_counts": _finalize_group_counts(per_origin),
         "per_classification_disagreement_counts": _finalize_group_counts(per_classification),
         "error_counts": error_counts,
+        "error_samples": error_samples,
         "rule_feedback_tag_counts": dict(sorted(tag_counts.items())),
         "reviewer_counts": dict(sorted(reviewer_counts.items())),
         "session_tag_counts": dict(sorted(session_tag_counts.items())),
@@ -317,6 +331,34 @@ def _error_type(automatic_label: str, human_label: str) -> str:
     if automatic_label == "drop" and human_label != "drop":
         return "false_drop"
     return "weak_mismatch"
+
+
+def _append_error_sample(
+    samples: list[dict[str, str]],
+    *,
+    item: dict[str, Any],
+    feedback: HumanReviewFeedback,
+    automatic_label: str,
+    human_label: str,
+    limit: int = 5,
+) -> None:
+    if len(samples) >= limit:
+        return
+    samples.append(
+        {
+            "review_item_id": str(item.get("review_item_id") or build_review_item_id(item)),
+            "symbol": str(item.get("symbol") or ""),
+            "query": str(item.get("query") or ""),
+            "query_origin": str(item.get("query_origin") or ""),
+            "classification": str(item.get("classification") or ""),
+            "automatic_label": automatic_label,
+            "human_label": human_label,
+            "title": str(item.get("title") or ""),
+            "url": str(item.get("url") or ""),
+            "note": feedback.note,
+            "rule_feedback_tag": feedback.rule_feedback_tag,
+        }
+    )
 
 
 def _group_seed() -> dict[str, dict[str, int]]:

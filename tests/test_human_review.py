@@ -101,6 +101,26 @@ class HumanReviewTest(unittest.TestCase):
         self.assertEqual(report["error_counts"]["false_keep"], 1)
         self.assertEqual(report["error_counts"]["false_drop"], 1)
         self.assertEqual(
+            report["error_samples"]["false_keep"][0]["review_item_id"],
+            alias_item.review_item_id,
+        )
+        self.assertEqual(
+            report["error_samples"]["false_keep"][0]["automatic_label"],
+            "keep",
+        )
+        self.assertEqual(
+            report["error_samples"]["false_keep"][0]["human_label"],
+            "drop",
+        )
+        self.assertEqual(
+            report["error_samples"]["false_drop"][0]["review_item_id"],
+            etf_item.review_item_id,
+        )
+        self.assertEqual(
+            report["error_samples"]["false_drop"][0]["rule_feedback_tag"],
+            "etf_threshold",
+        )
+        self.assertEqual(
             report["per_origin_disagreement_counts"]["alias"]["disagreement"],
             1,
         )
@@ -164,6 +184,10 @@ class HumanReviewTest(unittest.TestCase):
         self.assertEqual(report["agreement_count"], 0)
         self.assertEqual(report["disagreement_count"], 1)
         self.assertEqual(report["error_counts"]["false_keep"], 1)
+        self.assertEqual(
+            report["error_samples"]["false_keep"][0]["note"],
+            "",
+        )
         self.assertEqual(report["reviewer_counts"], {"operator-b": 1})
         self.assertEqual(report["session_tag_counts"], {"second-pass": 1})
         self.assertEqual(report["rule_feedback_tag_counts"], {"alias_noise": 1})

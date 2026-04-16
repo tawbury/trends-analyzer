@@ -70,6 +70,16 @@ def main(argv: list[str] | None = None) -> int:
         ],
         default="",
     )
+    parser.add_argument(
+        "--assist-preset",
+        choices=[
+            "",
+            "origin_high_disagreement",
+            "classification_high_disagreement",
+            "repeated_query_disagreement",
+        ],
+        default="",
+    )
     parser.add_argument("--min-disagreement-count", type=int, default=1)
     parser.add_argument("--min-disagreement-rate", type=float, default=0.0)
     parser.add_argument("--min-query-disagreement-count", type=int, default=2)
@@ -87,7 +97,7 @@ def main(argv: list[str] | None = None) -> int:
         repository.list_feedback_sync(provider=args.provider)
     )
     human_review_report = None
-    if args.disagreement_preset:
+    if args.disagreement_preset or args.assist_preset:
         report_path = (
             Path(args.human_review_report_path)
             if args.human_review_report_path
@@ -112,6 +122,7 @@ def main(argv: list[str] | None = None) -> int:
         latest_rule_feedback_tag=args.latest_rule_feedback_tag,
         noisy_query_only=args.noisy_query_only or args.priority == "noisy",
         disagreement_preset=args.disagreement_preset,
+        assist_preset=args.assist_preset,
         min_disagreement_count=args.min_disagreement_count,
         min_disagreement_rate=args.min_disagreement_rate,
         min_query_disagreement_count=args.min_query_disagreement_count,
@@ -143,6 +154,7 @@ def build_review_queue_rows(
     latest_rule_feedback_tag: str = "",
     noisy_query_only: bool = False,
     disagreement_preset: str = "",
+    assist_preset: str = "",
     min_disagreement_count: int = 1,
     min_disagreement_rate: float = 0.0,
     min_query_disagreement_count: int = 2,
@@ -152,6 +164,7 @@ def build_review_queue_rows(
     disagreement_signal = _build_disagreement_signal(
         report=human_review_report,
         preset=disagreement_preset,
+        assist_preset=assist_preset,
         min_disagreement_count=min_disagreement_count,
         min_disagreement_rate=min_disagreement_rate,
         min_query_disagreement_count=min_query_disagreement_count,
@@ -175,7 +188,7 @@ def build_review_queue_rows(
             continue
         item_ref = str(item.get("review_item_id") or build_review_item_id(item))
         row = review_item_to_queue_row(item, latest_feedback=feedback_by_ref.get(item_ref))
-        if disagreement_preset:
+        if disagreement_preset or assist_preset:
             reason = _disagreement_reason(item=item, row=row, signal=disagreement_signal)
             if reason is None:
                 continue
@@ -226,16 +239,19 @@ def _build_disagreement_signal(
     *,
     report: dict[str, Any] | None,
     preset: str,
+    assist_preset: str,
     min_disagreement_count: int,
     min_disagreement_rate: float,
     min_query_disagreement_count: int,
 ) -> dict[str, Any]:
-    if not preset:
+    if not preset and not assist_preset:
         return {}
     if report is None:
         raise ValueError("Human review report is required for disagreement-aware export")
+    assist_signal = _assist_signal(report.get("calibration_assist"), assist_preset=assist_preset)
     return {
         "preset": preset,
+        "assist_preset": assist_preset,
         "origins": _disagreement_keys(
             report.get("per_origin_disagreement_counts"),
             min_count=min_disagreement_count,
@@ -250,7 +266,42 @@ def _build_disagreement_signal(
             report.get("repeated_query_disagreements"),
             min_count=min_query_disagreement_count,
         ),
+        "assist_origins": assist_signal["origins"],
+        "assist_classifications": assist_signal["classifications"],
+        "assist_queries": assist_signal["queries"],
     }
+
+
+def _assist_signal(values: Any, *, assist_preset: str) -> dict[str, dict[str, str]]:
+    signal: dict[str, dict[str, str]] = {
+        "origins": {},
+        "classifications": {},
+        "queries": {},
+    }
+    if not assist_preset or not isinstance(values, list):
+        return signal
+    for value in values:
+        if not isinstance(value, dict) or value.get("type") != assist_preset:
+            continue
+        metric = _assist_metric(value)
+        if assist_preset == "origin_high_disagreement" and value.get("origin"):
+            signal["origins"][str(value["origin"])] = metric
+        if assist_preset == "classification_high_disagreement" and value.get("classification"):
+            signal["classifications"][str(value["classification"])] = metric
+        if assist_preset == "repeated_query_disagreement" and value.get("query"):
+            signal["queries"][str(value["query"])] = metric
+    return signal
+
+
+def _assist_metric(value: dict[str, Any]) -> str:
+    parts: list[str] = []
+    if "disagreement" in value:
+        parts.append(f"disagreement={value['disagreement']}")
+    if "disagreement_rate" in value:
+        parts.append(f"rate={value['disagreement_rate']}")
+    if "count" in value:
+        parts.append(f"count={value['count']}")
+    return ";".join(parts) or "assist_hint=true"
 
 
 def _disagreement_keys(
@@ -297,6 +348,26 @@ def _disagreement_reason(
     signal: dict[str, Any],
 ) -> dict[str, str] | None:
     preset = str(signal.get("preset") or "")
+    assist_preset = str(signal.get("assist_preset") or "")
+    if assist_preset == "origin_high_disagreement":
+        origin = str(item.get("query_origin") or "")
+        metric = signal["assist_origins"].get(origin)
+        if metric:
+            return _reason("assist_origin_high_disagreement", f"origin:{origin}", metric)
+    if assist_preset == "classification_high_disagreement":
+        classification = str(item.get("classification") or "")
+        metric = signal["assist_classifications"].get(classification)
+        if metric:
+            return _reason(
+                "assist_classification_high_disagreement",
+                f"classification:{classification}",
+                metric,
+            )
+    if assist_preset == "repeated_query_disagreement":
+        query = str(item.get("query") or "")
+        metric = signal["assist_queries"].get(query)
+        if metric:
+            return _reason("assist_repeated_query_disagreement", f"query:{query}", metric)
     if preset == "disagreement_origin":
         origin = str(item.get("query_origin") or "")
         metric = signal["origins"].get(origin)
