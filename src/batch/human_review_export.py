@@ -18,6 +18,7 @@ from src.ingestion.discovery.human_review import (
     resolve_latest_feedback,
     review_item_to_queue_row,
 )
+from src.ingestion.discovery.queue_summary_compare import compare_queue_summaries
 from src.ingestion.discovery.review import build_review_item_id
 
 
@@ -134,6 +135,19 @@ def main(argv: list[str] | None = None) -> int:
         default="",
         help="Optional JSON path for a compact queue export manifest and composition summary",
     )
+    parser.add_argument(
+        "--compare-summary-path",
+        default="",
+        help=(
+            "Optional previous queue summary path to compare against. "
+            "Defaults to existing --summary-output before overwrite, then latest_{provider}_queue_summary.json"
+        ),
+    )
+    parser.add_argument(
+        "--comparison-output",
+        default="",
+        help="Optional JSON path for current-vs-previous queue summary comparison",
+    )
     args = parser.parse_args(argv)
     disagreement_presets = _parse_signal_values(
         "disagreement-preset",
@@ -201,7 +215,17 @@ def main(argv: list[str] | None = None) -> int:
         write_queue_csv(path=output_path, rows=rows, bom=args.csv_bom)
     else:
         write_queue_jsonl(path=output_path, rows=rows)
-    if args.summary_output:
+    summary = None
+    previous_summary = None
+    previous_summary_path = ""
+    if args.summary_output or args.comparison_output:
+        previous_summary_path = _previous_summary_path(
+            directory=directory,
+            provider=args.provider,
+            summary_output=args.summary_output,
+            compare_summary_path=args.compare_summary_path,
+        )
+        previous_summary = _load_optional_summary(previous_summary_path)
         summary = build_queue_export_summary(
             provider=args.provider,
             review_path=str(review_path),
@@ -234,7 +258,16 @@ def main(argv: list[str] | None = None) -> int:
                 "min_query_disagreement_count": args.min_query_disagreement_count,
             },
         )
+    if summary is not None and args.summary_output:
         write_queue_summary(path=Path(args.summary_output), summary=summary)
+    if summary is not None and args.comparison_output:
+        comparison = compare_queue_summaries(
+            current_summary=summary,
+            previous_summary=previous_summary,
+            current_summary_path=args.summary_output,
+            previous_summary_path=previous_summary_path,
+        )
+        write_queue_summary(path=Path(args.comparison_output), summary=comparison)
     print(f"exported count={len(rows)} path={output_path}")
     return 0
 
@@ -351,6 +384,12 @@ def write_queue_summary(*, path: Path, summary: dict[str, Any]) -> None:
     )
 
 
+def load_queue_summary(path: Path) -> dict[str, Any]:
+    with path.open("r", encoding="utf-8") as file:
+        payload = json.load(file)
+    return payload if isinstance(payload, dict) else {}
+
+
 def build_queue_export_summary(
     *,
     provider: str,
@@ -394,6 +433,29 @@ def latest_feedback_by_item_ref(
 ) -> dict[str, HumanReviewFeedback]:
     latest_feedback, _ = resolve_latest_feedback(feedback_items)
     return {feedback.item_ref: feedback for feedback in latest_feedback}
+
+
+def _previous_summary_path(
+    *,
+    directory: Path,
+    provider: str,
+    summary_output: str,
+    compare_summary_path: str,
+) -> str:
+    if compare_summary_path:
+        return str(Path(compare_summary_path))
+    if summary_output and Path(summary_output).exists():
+        return str(Path(summary_output))
+    return str(directory / f"latest_{provider}_queue_summary.json")
+
+
+def _load_optional_summary(path: str) -> dict[str, Any] | None:
+    if not path:
+        return None
+    summary_path = Path(path)
+    if not summary_path.exists():
+        return None
+    return load_queue_summary(summary_path)
 
 
 def _build_disagreement_signal(

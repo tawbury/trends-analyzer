@@ -1081,6 +1081,185 @@ class HumanReviewImportExportTest(unittest.TestCase):
             {"value": "origin_disagreement", "count": 1},
         )
 
+    def test_export_cli_can_write_queue_summary_comparison(self) -> None:
+        temp_dir = TemporaryDirectory()
+        self.addCleanup(temp_dir.cleanup)
+        directory = Path(temp_dir.name)
+        alias_item = _review_item(
+            symbol="005930",
+            query="삼전",
+            query_origin="alias",
+            classification="stock",
+            decision="weak_keep",
+            suspicious=False,
+        )
+        etf_item = _review_item(
+            symbol="069500",
+            query="ETF",
+            query_origin="query_keyword",
+            classification="etf",
+            decision="drop",
+            suspicious=True,
+        )
+        (directory / "latest_naver_news_review.json").write_text(
+            json.dumps(_review_payload([alias_item, etf_item]), ensure_ascii=False),
+            encoding="utf-8",
+        )
+        (directory / "latest_naver_news_human_review_report.json").write_text(
+            json.dumps(
+                {
+                    "per_origin_disagreement_counts": {
+                        "alias": {
+                            "disagreement": 2,
+                            "reviewed": 3,
+                            "disagreement_rate": 0.6667,
+                        }
+                    },
+                    "per_classification_disagreement_counts": {},
+                    "repeated_query_disagreements": [["ETF", 2]],
+                    "calibration_assist": [],
+                },
+                ensure_ascii=False,
+            ),
+            encoding="utf-8",
+        )
+        repository = JsonlDiscoveryHumanReviewRepository(directory=directory)
+        repository.append_feedback_sync(
+            provider="naver_news",
+            feedback=HumanReviewFeedback(
+                item_ref=alias_item.review_item_id,
+                human_label="drop",
+                reviewed_at="2026-04-15T18:00:00+09:00",
+            ),
+        )
+        previous_summary_path = directory / "previous_queue_summary.json"
+        previous_summary_path.write_text(
+            json.dumps(
+                {
+                    "generated_at": "2026-04-15T18:00:00+09:00",
+                    "provider": "naver_news",
+                    "output_path": "old_queue.csv",
+                    "output_format": "csv",
+                    "selected_count": 1,
+                    "reviewed_count": 0,
+                    "unreviewed_count": 1,
+                    "matched_signal_counts": {"origin_disagreement": 1},
+                    "rereview_reason_counts": {"origin_disagreement": 1},
+                    "priority_score_buckets": {
+                        "0": 0,
+                        "1_39": 0,
+                        "40_59": 0,
+                        "60_99": 1,
+                        "100_plus": 0,
+                    },
+                    "top_matched_signals": [{"value": "origin_disagreement", "count": 1}],
+                    "applied_disagreement_presets": ["disagreement_origin"],
+                    "applied_assist_presets": [],
+                    "applied_queue_signals": [],
+                    "applied_filters": {
+                        "min_disagreement_count": 1,
+                        "latest_human_label": "",
+                    },
+                },
+                ensure_ascii=False,
+            ),
+            encoding="utf-8",
+        )
+        output_path = directory / "priority_queue.csv"
+        summary_path = directory / "priority_queue_summary.json"
+        comparison_path = directory / "priority_queue_comparison.json"
+
+        with redirect_stdout(io.StringIO()):
+            exit_code = export_main(
+                [
+                    "--directory",
+                    str(directory),
+                    "--output",
+                    str(output_path),
+                    "--format",
+                    "csv",
+                    "--disagreement-preset",
+                    "disagreement_origin,repeated_query_disagreement",
+                    "--queue-signal",
+                    "suspicious",
+                    "--min-disagreement-count",
+                    "2",
+                    "--min-disagreement-rate",
+                    "0.5",
+                    "--summary-output",
+                    str(summary_path),
+                    "--compare-summary-path",
+                    str(previous_summary_path),
+                    "--comparison-output",
+                    str(comparison_path),
+                ]
+            )
+
+        self.assertEqual(exit_code, 0)
+        comparison = json.loads(comparison_path.read_text(encoding="utf-8"))
+        self.assertTrue(comparison["comparison_available"])
+        self.assertEqual(comparison["previous_summary_path"], str(previous_summary_path))
+        self.assertEqual(comparison["count_deltas"]["selected_count"]["delta"], 1)
+        self.assertEqual(comparison["count_deltas"]["reviewed_count"]["delta"], 1)
+        self.assertEqual(
+            comparison["matched_signal_count_deltas"]["origin_disagreement"]["delta"],
+            0,
+        )
+        self.assertEqual(
+            comparison["matched_signal_count_deltas"]["repeated_query_disagreement"]["current"],
+            1,
+        )
+        self.assertEqual(
+            comparison["priority_score_bucket_deltas"]["100_plus"]["delta"],
+            1,
+        )
+        self.assertEqual(
+            comparison["metadata_comparison"]["applied_queue_signals"]["added"],
+            ["suspicious"],
+        )
+        self.assertEqual(
+            comparison["metadata_comparison"]["filter_differences"]["min_disagreement_count"],
+            {"current": 2, "previous": 1},
+        )
+
+    def test_export_cli_queue_summary_comparison_handles_missing_previous(self) -> None:
+        temp_dir = TemporaryDirectory()
+        self.addCleanup(temp_dir.cleanup)
+        directory = Path(temp_dir.name)
+        review_item = _review_item(
+            symbol="005930",
+            query="삼전",
+            query_origin="alias",
+            classification="stock",
+            decision="weak_keep",
+            suspicious=False,
+        )
+        (directory / "latest_naver_news_review.json").write_text(
+            json.dumps(_review_payload([review_item]), ensure_ascii=False),
+            encoding="utf-8",
+        )
+        comparison_path = directory / "first_run_comparison.json"
+
+        with redirect_stdout(io.StringIO()):
+            exit_code = export_main(
+                [
+                    "--directory",
+                    str(directory),
+                    "--output",
+                    str(directory / "queue.csv"),
+                    "--format",
+                    "csv",
+                    "--comparison-output",
+                    str(comparison_path),
+                ]
+            )
+
+        self.assertEqual(exit_code, 0)
+        comparison = json.loads(comparison_path.read_text(encoding="utf-8"))
+        self.assertFalse(comparison["comparison_available"])
+        self.assertEqual(comparison["unavailable_reason"], "previous_summary_not_found")
+        self.assertEqual(comparison["current_selected_count"], 1)
+
     def test_import_feedback_rows_counts_imported_skipped_and_invalid(self) -> None:
         temp_dir = TemporaryDirectory()
         self.addCleanup(temp_dir.cleanup)
