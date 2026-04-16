@@ -979,6 +979,108 @@ class HumanReviewImportExportTest(unittest.TestCase):
         self.assertEqual(rows[0]["reason_count"], "2")
         self.assertEqual(rows[0]["priority_score"], "115")
 
+    def test_export_cli_can_write_queue_summary_manifest(self) -> None:
+        temp_dir = TemporaryDirectory()
+        self.addCleanup(temp_dir.cleanup)
+        directory = Path(temp_dir.name)
+        alias_item = _review_item(
+            symbol="005930",
+            query="삼전",
+            query_origin="alias",
+            classification="stock",
+            decision="weak_keep",
+            suspicious=False,
+        )
+        etf_item = _review_item(
+            symbol="069500",
+            query="ETF",
+            query_origin="query_keyword",
+            classification="etf",
+            decision="drop",
+            suspicious=True,
+        )
+        (directory / "latest_naver_news_review.json").write_text(
+            json.dumps(_review_payload([alias_item, etf_item]), ensure_ascii=False),
+            encoding="utf-8",
+        )
+        (directory / "latest_naver_news_human_review_report.json").write_text(
+            json.dumps(
+                {
+                    "per_origin_disagreement_counts": {
+                        "alias": {
+                            "disagreement": 2,
+                            "reviewed": 3,
+                            "disagreement_rate": 0.6667,
+                        }
+                    },
+                    "per_classification_disagreement_counts": {},
+                    "repeated_query_disagreements": [["ETF", 2]],
+                    "calibration_assist": [],
+                },
+                ensure_ascii=False,
+            ),
+            encoding="utf-8",
+        )
+        repository = JsonlDiscoveryHumanReviewRepository(directory=directory)
+        repository.append_feedback_sync(
+            provider="naver_news",
+            feedback=HumanReviewFeedback(
+                item_ref=alias_item.review_item_id,
+                human_label="drop",
+                reviewed_at="2026-04-15T18:00:00+09:00",
+            ),
+        )
+        output_path = directory / "priority_queue.csv"
+        summary_path = directory / "priority_queue_summary.json"
+
+        with redirect_stdout(io.StringIO()):
+            exit_code = export_main(
+                [
+                    "--directory",
+                    str(directory),
+                    "--output",
+                    str(output_path),
+                    "--format",
+                    "csv",
+                    "--disagreement-preset",
+                    "disagreement_origin,repeated_query_disagreement",
+                    "--queue-signal",
+                    "suspicious",
+                    "--min-disagreement-count",
+                    "2",
+                    "--min-disagreement-rate",
+                    "0.5",
+                    "--summary-output",
+                    str(summary_path),
+                ]
+            )
+
+        self.assertEqual(exit_code, 0)
+        summary = json.loads(summary_path.read_text(encoding="utf-8"))
+        self.assertEqual(summary["provider"], "naver_news")
+        self.assertEqual(summary["output_path"], str(output_path))
+        self.assertEqual(
+            summary["human_review_report_path"],
+            str(directory / "latest_naver_news_human_review_report.json"),
+        )
+        self.assertEqual(
+            summary["applied_disagreement_presets"],
+            ["disagreement_origin", "repeated_query_disagreement"],
+        )
+        self.assertEqual(summary["applied_queue_signals"], ["suspicious"])
+        self.assertEqual(summary["applied_filters"]["min_disagreement_count"], 2)
+        self.assertEqual(summary["selected_count"], 2)
+        self.assertEqual(summary["reviewed_count"], 1)
+        self.assertEqual(summary["unreviewed_count"], 1)
+        self.assertEqual(summary["matched_signal_counts"]["origin_disagreement"], 1)
+        self.assertEqual(summary["matched_signal_counts"]["suspicious_focus"], 1)
+        self.assertEqual(summary["priority_score_buckets"]["100_plus"], 1)
+        self.assertEqual(summary["top_priority_row_samples"][0]["priority_score"], "115")
+        self.assertEqual(
+            summary["top_matched_signals"][0],
+            {"value": "origin_disagreement", "count": 1},
+        )
+
     def test_import_feedback_rows_counts_imported_skipped_and_invalid(self) -> None:
         temp_dir = TemporaryDirectory()
         self.addCleanup(temp_dir.cleanup)

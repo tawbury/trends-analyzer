@@ -4,6 +4,7 @@ import argparse
 import csv
 import json
 import sys
+from datetime import datetime
 from pathlib import Path
 from typing import Any
 
@@ -128,6 +129,11 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--min-disagreement-rate", type=float, default=0.0)
     parser.add_argument("--min-query-disagreement-count", type=int, default=2)
     parser.add_argument("--csv-bom", action="store_true")
+    parser.add_argument(
+        "--summary-output",
+        default="",
+        help="Optional JSON path for a compact queue export manifest and composition summary",
+    )
     args = parser.parse_args(argv)
     disagreement_presets = _parse_signal_values(
         "disagreement-preset",
@@ -156,13 +162,16 @@ def main(argv: list[str] | None = None) -> int:
         repository.list_feedback_sync(provider=args.provider)
     )
     human_review_report = None
+    human_review_report_path = ""
     if disagreement_presets or assist_presets:
         report_path = (
             Path(args.human_review_report_path)
             if args.human_review_report_path
             else directory / f"latest_{args.provider}_human_review_report.json"
         )
+        human_review_report_path = str(report_path)
         human_review_report = load_review_artifact(report_path)
+    queue_signals = queue_signals + _priority_queue_signals(args.priority)
     rows = build_review_queue_rows(
         review_payload=load_review_artifact(review_path),
         latest_feedback_by_ref=latest_feedback_by_ref,
@@ -182,7 +191,7 @@ def main(argv: list[str] | None = None) -> int:
         noisy_query_only=args.noisy_query_only or args.priority == "noisy",
         disagreement_preset=disagreement_presets,
         assist_preset=assist_presets,
-        queue_signal=queue_signals + _priority_queue_signals(args.priority),
+        queue_signal=queue_signals,
         min_disagreement_count=args.min_disagreement_count,
         min_disagreement_rate=args.min_disagreement_rate,
         min_query_disagreement_count=args.min_query_disagreement_count,
@@ -192,6 +201,40 @@ def main(argv: list[str] | None = None) -> int:
         write_queue_csv(path=output_path, rows=rows, bom=args.csv_bom)
     else:
         write_queue_jsonl(path=output_path, rows=rows)
+    if args.summary_output:
+        summary = build_queue_export_summary(
+            provider=args.provider,
+            review_path=str(review_path),
+            human_review_report_path=human_review_report_path,
+            output_path=str(output_path),
+            output_format=args.format,
+            disagreement_presets=disagreement_presets,
+            assist_presets=assist_presets,
+            queue_signals=queue_signals,
+            rows=rows,
+            filters={
+                "max_items": args.max_items,
+                "discovery_decision": args.discovery_decision
+                or _priority_discovery_decision(args.priority),
+                "query_origin": args.query_origin,
+                "classification": args.classification,
+                "suspicious_only": args.suspicious_only or args.priority == "suspicious",
+                "exclude_reviewed": args.exclude_reviewed or args.unreviewed_only,
+                "unreviewed_only": args.unreviewed_only,
+                "reviewed_only": args.reviewed_only,
+                "latest_human_label": args.latest_human_label
+                or _priority_latest_human_label(args.priority),
+                "latest_reviewer": args.latest_reviewer,
+                "latest_session_tag": args.latest_session_tag,
+                "latest_rule_feedback_tag": args.latest_rule_feedback_tag,
+                "noisy_query_only": args.noisy_query_only or args.priority == "noisy",
+                "priority": args.priority,
+                "min_disagreement_count": args.min_disagreement_count,
+                "min_disagreement_rate": args.min_disagreement_rate,
+                "min_query_disagreement_count": args.min_query_disagreement_count,
+            },
+        )
+        write_queue_summary(path=Path(args.summary_output), summary=summary)
     print(f"exported count={len(rows)} path={output_path}")
     return 0
 
@@ -298,6 +341,52 @@ def write_queue_jsonl(*, path: Path, rows: list[dict[str, str]]) -> None:
         for row in rows:
             file.write(json.dumps(row, ensure_ascii=False, sort_keys=True))
             file.write("\n")
+
+
+def write_queue_summary(*, path: Path, summary: dict[str, Any]) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(
+        json.dumps(summary, ensure_ascii=False, indent=2, sort_keys=True),
+        encoding="utf-8",
+    )
+
+
+def build_queue_export_summary(
+    *,
+    provider: str,
+    review_path: str,
+    human_review_report_path: str,
+    output_path: str,
+    output_format: str,
+    disagreement_presets: list[str],
+    assist_presets: list[str],
+    queue_signals: list[str],
+    filters: dict[str, Any],
+    rows: list[dict[str, str]],
+) -> dict[str, Any]:
+    reviewed_count = sum(1 for row in rows if row.get("already_reviewed") == "true")
+    matched_signal_counts = _count_split_values(rows, "matched_signals")
+    rereview_reason_counts = _count_values(rows, "rereview_reason")
+    return {
+        "generated_at": datetime.now().astimezone().isoformat(),
+        "provider": provider,
+        "review_path": review_path,
+        "human_review_report_path": human_review_report_path,
+        "applied_disagreement_presets": disagreement_presets,
+        "applied_assist_presets": assist_presets,
+        "applied_queue_signals": queue_signals,
+        "applied_filters": filters,
+        "output_path": output_path,
+        "output_format": output_format,
+        "selected_count": len(rows),
+        "reviewed_count": reviewed_count,
+        "unreviewed_count": len(rows) - reviewed_count,
+        "matched_signal_counts": matched_signal_counts,
+        "rereview_reason_counts": rereview_reason_counts,
+        "top_matched_signals": _top_counts(matched_signal_counts, limit=10),
+        "priority_score_buckets": _priority_score_buckets(rows),
+        "top_priority_row_samples": _top_priority_row_samples(rows, limit=5),
+    }
 
 
 def latest_feedback_by_item_ref(
@@ -553,6 +642,79 @@ def _priority_score(signals: list[str]) -> int:
 
 def _queue_row_sort_key(row: dict[str, str]) -> int:
     return -int(row.get("priority_score") or 0)
+
+
+def _count_split_values(rows: list[dict[str, str]], key: str) -> dict[str, int]:
+    counts: dict[str, int] = {}
+    for row in rows:
+        for value in _split_row_values(row.get(key, "")):
+            counts[value] = counts.get(value, 0) + 1
+    return dict(sorted(counts.items()))
+
+
+def _count_values(rows: list[dict[str, str]], key: str) -> dict[str, int]:
+    counts: dict[str, int] = {}
+    for row in rows:
+        value = str(row.get(key) or "")
+        if not value:
+            continue
+        counts[value] = counts.get(value, 0) + 1
+    return dict(sorted(counts.items()))
+
+
+def _split_row_values(value: str) -> list[str]:
+    return [part.strip() for part in str(value or "").split(";") if part.strip()]
+
+
+def _top_counts(counts: dict[str, int], *, limit: int) -> list[dict[str, Any]]:
+    return [
+        {"value": value, "count": count}
+        for value, count in sorted(counts.items(), key=lambda item: (-item[1], item[0]))[:limit]
+    ]
+
+
+def _priority_score_buckets(rows: list[dict[str, str]]) -> dict[str, int]:
+    buckets = {
+        "0": 0,
+        "1_39": 0,
+        "40_59": 0,
+        "60_99": 0,
+        "100_plus": 0,
+    }
+    for row in rows:
+        score = int(row.get("priority_score") or 0)
+        if score <= 0:
+            buckets["0"] += 1
+        elif score < 40:
+            buckets["1_39"] += 1
+        elif score < 60:
+            buckets["40_59"] += 1
+        elif score < 100:
+            buckets["60_99"] += 1
+        else:
+            buckets["100_plus"] += 1
+    return buckets
+
+
+def _top_priority_row_samples(rows: list[dict[str, str]], *, limit: int) -> list[dict[str, str]]:
+    sample_fields = [
+        "review_item_id",
+        "priority_score",
+        "reason_count",
+        "matched_signals",
+        "symbol",
+        "query",
+        "query_origin",
+        "classification",
+        "discovery_decision",
+        "latest_human_label",
+        "title",
+        "url",
+    ]
+    return [
+        {field: row.get(field, "") for field in sample_fields}
+        for row in rows[:limit]
+    ]
 
 
 def _reason(reason: str, scope: str, metric: str) -> dict[str, str]:
