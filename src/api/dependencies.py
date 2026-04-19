@@ -93,3 +93,27 @@ def get_idempotency_key(
     idempotency_key: str | None = Header(default=None, alias="Idempotency-Key"),
 ) -> str | None:
     return idempotency_key
+
+import logging
+logger = logging.getLogger(__name__)
+
+def verify_n8n_token(
+    x_n8n_secret: str | None = Header(default=None, alias="X-N8N-Secret"),
+) -> None:
+    settings = get_container().settings
+    expected = settings.n8n_webhook_secret
+    
+    if not expected:
+        logger.warning("N8N_WEBHOOK_SECRET is not configured. Webhook verification skipped.")
+        return
+        
+    if x_n8n_secret != expected:
+        raise HTTPException(
+            status_code=401,
+            detail={
+                "error": {
+                    "code": "WEBHOOK_AUTH_FAILED",
+                    "message": "Invalid or missing X-N8N-Secret header",
+                }
+            },
+        )

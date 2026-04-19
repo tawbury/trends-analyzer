@@ -2,7 +2,11 @@ from __future__ import annotations
 
 from fastapi import APIRouter, Depends
 
-from src.api.dependencies import get_ingest_news_use_case, verify_market_hours
+from src.api.dependencies import (
+    get_ingest_news_use_case,
+    verify_market_hours,
+    verify_n8n_token,
+)
 from src.application.use_cases.ingest_news import IngestNewsUseCase
 from src.contracts.core import RawNewsItem
 
@@ -28,6 +32,6 @@ async def ingest_batch(
     return {"batch_id": "batch_mock_001", "accepted_count": len(items)}
 
 
-@router.post("/webhook/n8n")
+@router.post("/webhook/n8n", dependencies=[Depends(verify_n8n_token)])
 async def ingest_n8n_webhook(payload: dict):
     return {"status": "received"}

@@ -78,6 +78,7 @@ class Settings:
     naver_include_query_keywords: bool = True
     discovery_review_enabled: bool = True
     discovery_rule_config_path: str = ""
+    n8n_webhook_secret: str | None = None
 
     @classmethod
     def from_env(cls) -> "Settings":
@@ -156,4 +157,5 @@ class Settings:
             ),
             discovery_review_enabled=_bool_env("TRENDS_DISCOVERY_REVIEW_ENABLED", True),
             discovery_rule_config_path=os.getenv("TRENDS_DISCOVERY_RULE_CONFIG_PATH", ""),
+            n8n_webhook_secret=os.getenv("N8N_WEBHOOK_SECRET"),
         )

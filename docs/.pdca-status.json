@@ -1,17 +1,9 @@
 {
   "version": "2.0",
-  "lastUpdated": "2026-04-19T13:45:00.000Z",
+  "lastUpdated": "2026-04-19T14:15:00.000Z",
   "activeFeatures": [],
   "primaryFeature": null,
-  "features": {
-    "ingest-persistence": {
-      "phase": "Report",
-      "status": "Done",
-      "lastUpdated": "2026-04-19T13:55:00.000Z",
-      "planPath": "docs/01-plan/ingest-persistence.md",
-      "reportPath": "docs/03-report/ingest-persistence.md"
-    }
-  },
+  "features": {},
   "archivedFeatures": {
     "workspace-alignment-v1": {
       "phase": "Report",
@@ -42,6 +34,18 @@
       "status": "Archived",
       "lastUpdated": "2026-04-19T13:40:00.000Z",
       "archivePath": "docs/99-archive/corroboration-logic/"
+    },
+    "ingest-persistence": {
+      "phase": "Report",
+      "status": "Archived",
+      "lastUpdated": "2026-04-19T13:55:00.000Z",
+      "archivePath": "docs/99-archive/ingest-persistence/"
+    },
+    "n8n-webhook-verification": {
+      "phase": "Report",
+      "status": "Archived",
+      "lastUpdated": "2026-04-19T14:10:00.000Z",
+      "archivePath": "docs/99-archive/n8n-webhook-verification/"
     }
   },
   "pipeline": {
@@ -56,6 +60,6 @@
   "session": {
     "startedAt": "2026-04-19T08:20:03.158Z",
     "onboardingCompleted": true,
-    "lastActivity": "2026-04-19T13:45:00.000Z"
+    "lastActivity": "2026-04-19T14:15:00.000Z"
   }
 }
