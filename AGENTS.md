@@ -61,6 +61,7 @@
 
 ## Project Context
 
+- **언어 규칙**: 모든 문서와 코드 주석은 한글(Korean)로 작성한다. 단, 코드 식별자(변수, 클래스, 함수명)는 영문을 유지한다.
 - 이 프로젝트는 독립 Trend Intelligence Platform이며, QTS는 Adapter를 통해 연동되는 소비자 중 하나다.
 - 목표는 뉴스 기반 트렌드 분석, QTS 의사결정 보조 payload, n8n/API 연동용 범용 인텔리전스 엔진 구축이다.
 - 대상 환경은 Windows 11 + WSL2 개발, OCI ARM 운영, n8n 연동이다.
