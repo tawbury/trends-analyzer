@@ -12,7 +12,11 @@ from src.contracts.core import (
     ThemeSignal,
     TrendSnapshot,
 )
-from src.contracts.payloads import QTSInputPayload
+from src.contracts.payloads import (
+    GenericInsightPayload,
+    QTSInputPayload,
+    WorkflowTriggerPayload,
+)
 from src.contracts.runtime import AnalyzeDailyResult
 
 
@@ -26,6 +30,12 @@ class JsonlSnapshotRepository:
 
     async def get(self, snapshot_id: str) -> TrendSnapshot | None:
         item = _find_latest_by_id(self.path, snapshot_id)
+        if item is None:
+            return None
+        return _snapshot_from_dict(item)
+
+    async def get_latest(self) -> TrendSnapshot | None:
+        item = _find_latest(self.path)
         if item is None:
             return None
         return _snapshot_from_dict(item)
@@ -44,6 +54,54 @@ class JsonlQtsPayloadRepository:
         if item is None:
             return None
         return _qts_payload_from_dict(item)
+
+    async def get_latest(self, snapshot_id: str | None = None) -> QTSInputPayload | None:
+        item = _find_latest(self.path, snapshot_id=snapshot_id)
+        if item is None:
+            return None
+        return _qts_payload_from_dict(item)
+
+
+class JsonlGenericPayloadRepository:
+    def __init__(self, path: Path) -> None:
+        self.path = path
+        self.path.parent.mkdir(parents=True, exist_ok=True)
+
+    async def save(self, payload: GenericInsightPayload) -> None:
+        _append_jsonl(self.path, _to_jsonable(payload))
+
+    async def get(self, payload_id: str) -> GenericInsightPayload | None:
+        item = _find_latest_by_id(self.path, payload_id)
+        if item is None:
+            return None
+        return _generic_payload_from_dict(item)
+
+    async def get_latest(self, snapshot_id: str | None = None) -> GenericInsightPayload | None:
+        item = _find_latest(self.path, snapshot_id=snapshot_id)
+        if item is None:
+            return None
+        return _generic_payload_from_dict(item)
+
+
+class JsonlWorkflowPayloadRepository:
+    def __init__(self, path: Path) -> None:
+        self.path = path
+        self.path.parent.mkdir(parents=True, exist_ok=True)
+
+    async def save(self, payload: WorkflowTriggerPayload) -> None:
+        _append_jsonl(self.path, _to_jsonable(payload))
+
+    async def get(self, payload_id: str) -> WorkflowTriggerPayload | None:
+        item = _find_latest_by_id(self.path, payload_id)
+        if item is None:
+            return None
+        return _workflow_payload_from_dict(item)
+
+    async def get_latest(self, snapshot_id: str | None = None) -> WorkflowTriggerPayload | None:
+        item = _find_latest(self.path, snapshot_id=snapshot_id)
+        if item is None:
+            return None
+        return _workflow_payload_from_dict(item)
 
 
 class JsonlIdempotencyRepository:
@@ -86,6 +144,23 @@ def _find_latest_by_id(path: Path, item_id: str) -> dict[str, Any] | None:
                 continue
             item = json.loads(line)
             if item.get("id") == item_id:
+                found = item
+    return found
+
+
+def _find_latest(path: Path, snapshot_id: str | None = None) -> dict[str, Any] | None:
+    if not path.exists():
+        return None
+    found: dict[str, Any] | None = None
+    with path.open("r", encoding="utf-8") as file:
+        for line in file:
+            if not line.strip():
+                continue
+            item = json.loads(line)
+            if snapshot_id:
+                if item.get("snapshot_id") == snapshot_id:
+                    found = item
+            else:
                 found = item
     return found
 
@@ -153,4 +228,31 @@ def _qts_payload_from_dict(item: dict[str, Any]) -> QTSInputPayload:
         confidence_score=item["confidence_score"],
         generated_at=datetime.fromisoformat(item["generated_at"]),
         adapter_version=item["adapter_version"],
+    )
+
+
+def _generic_payload_from_dict(item: dict[str, Any]) -> GenericInsightPayload:
+    return GenericInsightPayload(
+        id=item["id"],
+        snapshot_id=item["snapshot_id"],
+        daily_briefing=item["daily_briefing"],
+        theme_ranking=item["theme_ranking"],
+        watchlist_candidates=item["watchlist_candidates"],
+        alert_summary=item["alert_summary"],
+        report_seed=item["report_seed"],
+        generated_at=datetime.fromisoformat(item["generated_at"]),
+    )
+
+
+def _workflow_payload_from_dict(item: dict[str, Any]) -> WorkflowTriggerPayload:
+    return WorkflowTriggerPayload(
+        id=item["id"],
+        snapshot_id=item["snapshot_id"],
+        trigger_type=item["trigger_type"],
+        priority=item["priority"],
+        recommended_actions=item["recommended_actions"],
+        routing_conditions=item["routing_conditions"],
+        downstream_payload=item["downstream_payload"],
+        dispatch_policy=item["dispatch_policy"],
+        generated_at=datetime.fromisoformat(item["generated_at"]),
     )

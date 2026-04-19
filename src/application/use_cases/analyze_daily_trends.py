@@ -3,6 +3,8 @@ from __future__ import annotations
 import logging
 
 from src.contracts.ports import (
+    GenericAdapterPort,
+    GenericPayloadRepository,
     NewsNormalizerPort,
     NewsScorerPort,
     NewsSourcePort,
@@ -10,6 +12,8 @@ from src.contracts.ports import (
     QtsPayloadRepository,
     SnapshotRepository,
     TrendAggregatorPort,
+    WorkflowAdapterPort,
+    WorkflowPayloadRepository,
 )
 from src.contracts.runtime import AnalyzeDailyCommand, AnalyzeDailyResult
 from src.shared.logging import log_with_context
@@ -27,8 +31,12 @@ class AnalyzeDailyTrendsUseCase:
         scorer: NewsScorerPort,
         aggregator: TrendAggregatorPort,
         qts_adapter: QtsAdapterPort,
+        generic_adapter: GenericAdapterPort,
+        workflow_adapter: WorkflowAdapterPort,
         snapshot_repository: SnapshotRepository,
         qts_payload_repository: QtsPayloadRepository,
+        generic_payload_repository: GenericPayloadRepository,
+        workflow_payload_repository: WorkflowPayloadRepository,
         rules_version: str = "rules-mvp-0.1",
     ) -> None:
         self.news_source = news_source
@@ -36,8 +44,12 @@ class AnalyzeDailyTrendsUseCase:
         self.scorer = scorer
         self.aggregator = aggregator
         self.qts_adapter = qts_adapter
+        self.generic_adapter = generic_adapter
+        self.workflow_adapter = workflow_adapter
         self.snapshot_repository = snapshot_repository
         self.qts_payload_repository = qts_payload_repository
+        self.generic_payload_repository = generic_payload_repository
+        self.workflow_payload_repository = workflow_payload_repository
         self.rules_version = rules_version
 
     async def execute(self, command: AnalyzeDailyCommand) -> AnalyzeDailyResult:
@@ -62,8 +74,15 @@ class AnalyzeDailyTrendsUseCase:
         )
         await self.snapshot_repository.save(snapshot)
 
+        # Generate and save consumer payloads
         qts_payload = self.qts_adapter.convert(snapshot, generated_at=command.as_of)
         await self.qts_payload_repository.save(qts_payload)
+
+        generic_payload = self.generic_adapter.convert(snapshot, generated_at=command.as_of)
+        await self.generic_payload_repository.save(generic_payload)
+
+        workflow_payload = self.workflow_adapter.convert(snapshot, generated_at=command.as_of)
+        await self.workflow_payload_repository.save(workflow_payload)
 
         log_with_context(logger, "analyze_daily_completed", command.correlation)
         return AnalyzeDailyResult(

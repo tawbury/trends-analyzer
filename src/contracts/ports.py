@@ -9,7 +9,11 @@ from src.contracts.core import (
     RawNewsItem,
     TrendSnapshot,
 )
-from src.contracts.payloads import QTSInputPayload
+from src.contracts.payloads import (
+    GenericInsightPayload,
+    QTSInputPayload,
+    WorkflowTriggerPayload,
+)
 from src.contracts.runtime import AnalyzeDailyResult, CorrelationContext
 from src.contracts.symbols import (
     SymbolCatalog,
@@ -55,11 +59,24 @@ class QtsAdapterPort(Protocol):
         ...
 
 
+class GenericAdapterPort(Protocol):
+    def convert(self, snapshot: TrendSnapshot, generated_at: datetime) -> GenericInsightPayload:
+        ...
+
+
+class WorkflowAdapterPort(Protocol):
+    def convert(self, snapshot: TrendSnapshot, generated_at: datetime) -> WorkflowTriggerPayload:
+        ...
+
+
 class SnapshotRepository(Protocol):
     async def save(self, snapshot: TrendSnapshot) -> None:
         ...
 
     async def get(self, snapshot_id: str) -> TrendSnapshot | None:
+        ...
+
+    async def get_latest(self) -> TrendSnapshot | None:
         ...
 
 
@@ -68,6 +85,31 @@ class QtsPayloadRepository(Protocol):
         ...
 
     async def get(self, payload_id: str) -> QTSInputPayload | None:
+        ...
+
+    async def get_latest(self, snapshot_id: str | None = None) -> QTSInputPayload | None:
+        ...
+
+
+class GenericPayloadRepository(Protocol):
+    async def save(self, payload: GenericInsightPayload) -> None:
+        ...
+
+    async def get(self, payload_id: str) -> GenericInsightPayload | None:
+        ...
+
+    async def get_latest(self, snapshot_id: str | None = None) -> GenericInsightPayload | None:
+        ...
+
+
+class WorkflowPayloadRepository(Protocol):
+    async def save(self, payload: WorkflowTriggerPayload) -> None:
+        ...
+
+    async def get(self, payload_id: str) -> WorkflowTriggerPayload | None:
+        ...
+
+    async def get_latest(self, snapshot_id: str | None = None) -> WorkflowTriggerPayload | None:
         ...
 
 

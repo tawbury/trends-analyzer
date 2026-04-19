@@ -7,22 +7,30 @@ from itertools import count
 from uuid import uuid4
 
 from src.adapters.qts.adapter import QtsAdapter
+from src.adapters.generic.adapter import GenericAdapter
+from src.adapters.workflow.adapter import WorkflowAdapter
 from src.application.use_cases.refresh_symbol_catalog import RefreshSymbolCatalogUseCase
 from src.application.use_cases.analyze_daily_trends import AnalyzeDailyTrendsUseCase
+from src.application.use_cases.get_signals import GetSignalsUseCase
+from src.application.use_cases.ingest_news import IngestNewsUseCase
 from src.contracts.ports import (
+    GenericPayloadRepository,
     IdempotencyRepository,
     NewsSourcePort,
     QtsPayloadRepository,
     SnapshotRepository,
+    WorkflowPayloadRepository,
 )
 from src.contracts.runtime import CorrelationContext
 from src.core.aggregate import TrendAggregator
 from src.core.normalize import NewsNormalizer
-from src.core.score import MockNewsScorer
+from src.core.score import NewsScorer
 from src.db.repositories.jsonl import (
+    JsonlGenericPayloadRepository,
     JsonlIdempotencyRepository,
     JsonlQtsPayloadRepository,
     JsonlSnapshotRepository,
+    JsonlWorkflowPayloadRepository,
 )
 from src.db.repositories.discovery_review_repository import JsonDiscoveryReviewRepository
 from src.db.repositories.symbol_catalog_repository import JsonSymbolCatalogRepository
@@ -53,10 +61,14 @@ class Container:
     settings: Settings
     snapshot_repository: SnapshotRepository
     qts_payload_repository: QtsPayloadRepository
+    generic_payload_repository: GenericPayloadRepository
+    workflow_payload_repository: WorkflowPayloadRepository
     idempotency_repository: IdempotencyRepository
     news_source: NewsSourcePort
     analyze_daily_use_case: AnalyzeDailyTrendsUseCase
     refresh_symbol_catalog_use_case: RefreshSymbolCatalogUseCase
+    get_signals_use_case: GetSignalsUseCase
+    ingest_news_use_case: IngestNewsUseCase
 
 
 _job_sequence = count(start=1)
@@ -67,7 +79,10 @@ def build_container(settings: Settings | None = None) -> Container:
     data_dir = resolved_settings.data_dir
     snapshot_repository = JsonlSnapshotRepository(data_dir / "snapshots.jsonl")
     qts_payload_repository = JsonlQtsPayloadRepository(data_dir / "qts_payloads.jsonl")
+    generic_payload_repository = JsonlGenericPayloadRepository(data_dir / "generic_payloads.jsonl")
+    workflow_payload_repository = JsonlWorkflowPayloadRepository(data_dir / "workflow_payloads.jsonl")
     idempotency_repository = JsonlIdempotencyRepository(data_dir / "idempotency.jsonl")
+    
     symbol_catalog_repository = JsonSymbolCatalogRepository(
         directory=data_dir / "symbol_catalog",
     )
@@ -77,28 +92,39 @@ def build_container(settings: Settings | None = None) -> Container:
     )
     symbol_catalog_source = build_symbol_catalog_source(resolved_settings)
 
-    use_case = AnalyzeDailyTrendsUseCase(
+    analyze_daily_use_case = AnalyzeDailyTrendsUseCase(
         news_source=news_source,
         normalizer=NewsNormalizer(),
-        scorer=MockNewsScorer(),
+        scorer=NewsScorer(),
         aggregator=TrendAggregator(),
         qts_adapter=QtsAdapter(),
+        generic_adapter=GenericAdapter(),
+        workflow_adapter=WorkflowAdapter(),
         snapshot_repository=snapshot_repository,
         qts_payload_repository=qts_payload_repository,
+        generic_payload_repository=generic_payload_repository,
+        workflow_payload_repository=workflow_payload_repository,
         rules_version=resolved_settings.rules_version,
     )
     refresh_symbol_catalog_use_case = RefreshSymbolCatalogUseCase(
         source=symbol_catalog_source,
         repository=symbol_catalog_repository,
     )
+    get_signals_use_case = GetSignalsUseCase(snapshot_repository=snapshot_repository)
+    ingest_news_use_case = IngestNewsUseCase()
+
     return Container(
         settings=resolved_settings,
         snapshot_repository=snapshot_repository,
         qts_payload_repository=qts_payload_repository,
+        generic_payload_repository=generic_payload_repository,
+        workflow_payload_repository=workflow_payload_repository,
         idempotency_repository=idempotency_repository,
         news_source=news_source,
-        analyze_daily_use_case=use_case,
+        analyze_daily_use_case=analyze_daily_use_case,
         refresh_symbol_catalog_use_case=refresh_symbol_catalog_use_case,
+        get_signals_use_case=get_signals_use_case,
+        ingest_news_use_case=ingest_news_use_case,
     )
 
 

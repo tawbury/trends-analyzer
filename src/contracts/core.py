@@ -23,12 +23,27 @@ class RawNewsItem:
 class NormalizedNewsItem:
     id: str
     raw_news_id: str
+    source: str
     normalized_title: str
     normalized_body: str
     canonical_url: str
     published_at: datetime
     language: str
     symbols: list[str] = field(default_factory=list)
+
+
+@dataclass(frozen=True)
+class NewsCredibilityScore:
+    source_tier: str
+    source_weight: float
+    evidence_score: float
+    corroboration_score: float
+    content_quality_score: float
+    freshness_score: float
+    conflict_penalty: float
+    rumor_penalty: float
+    confidence_score: float
+    method_version: str
 
 
 @dataclass(frozen=True)
@@ -41,10 +56,14 @@ class NewsEvaluation:
     confidence_score: float
     novelty_score: float
     source_weight: float
-    themes: list[str]
-    sectors: list[str]
-    symbols: list[str]
-    evaluated_at: datetime
+    urgency_score: float = 0.0
+    actionability_score: float = 0.0
+    content_value_score: float = 0.0
+    credibility_breakdown: dict[str, float | str] = field(default_factory=dict)
+    themes: list[str] = field(default_factory=list)
+    sectors: list[str] = field(default_factory=list)
+    symbols: list[str] = field(default_factory=list)
+    evaluated_at: datetime = field(default_factory=datetime.now)
 
 
 @dataclass(frozen=True)

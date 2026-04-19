@@ -8,6 +8,7 @@ class NewsNormalizer:
         return NormalizedNewsItem(
             id=f"norm_{item.id}",
             raw_news_id=item.id,
+            source=item.source,
             normalized_title=" ".join(item.title.strip().split()),
             normalized_body=" ".join(item.body.strip().split()),
             canonical_url=item.url.strip(),
