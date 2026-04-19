@@ -9,6 +9,7 @@ class SymbolRecord:
     symbol: str
     name: str
     market: str
+    sector: str = ""
     security_type: str = "stock"
     korean_name: str = ""
     english_name: str = ""

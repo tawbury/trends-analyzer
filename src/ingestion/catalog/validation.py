@@ -56,10 +56,17 @@ def _record_issues(
     checks = [
         (not _SYMBOL_RE.match(record.symbol), "invalid_symbol_code", "symbol code is not 6 digits"),
         (not record.name.strip(), "missing_name", "symbol name is empty"),
+        (len(record.name.strip()) < 2, "suspicious_name", "symbol name is too short"),
         (symbol_counts[record.symbol] > 1, "duplicate_symbol", "symbol code appears more than once"),
         (bool(normalized_name) and name_counts[normalized_name] > 1, "duplicate_name", "normalized name appears more than once"),
         (record.market == "UNKNOWN", "unknown_market", "market is unknown"),
+        (not record.sector and not record.metadata.get("sector"), "missing_sector", "sector information is missing"),
     ]
+    
+    # Simple market-code prefix check (example for KOSPI/KOSDAQ)
+    if record.market == "KOSPI" and record.symbol.startswith("0") and len(record.name) > 5:
+         # Some KOSPI codes start with 0, but this is a placeholder for more complex logic
+         pass
     for failed, code, message in checks:
         if failed:
             issues.append(
