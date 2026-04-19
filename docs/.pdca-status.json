@@ -1,36 +1,41 @@
 {
   "version": "2.0",
-  "lastUpdated": "2026-04-19T11:45:00.000Z",
+  "lastUpdated": "2026-04-19T13:00:00.000Z",
   "activeFeatures": [],
   "primaryFeature": null,
   "features": {
-    "workspace-alignment-v1": {
+    "corroboration-logic": {
       "phase": "Report",
       "status": "Done",
+      "lastUpdated": "2026-04-19T13:40:00.000Z",
+      "planPath": "docs/01-plan/corroboration-logic.md",
+      "reportPath": "docs/03-report/corroboration-logic.md"
+    }
+  },
+  "archivedFeatures": {
+    "workspace-alignment-v1": {
+      "phase": "Report",
+      "status": "Archived",
       "lastUpdated": "2026-04-19T11:00:00.000Z",
-      "planPath": "docs/01-plan/workspace-alignment-v1.md",
-      "reportPath": "docs/03-report/workspace-alignment-v1.md"
+      "archivePath": "docs/99-archive/workspace-alignment-v1/"
     },
     "news-credibility-logic": {
       "phase": "Report",
-      "status": "Done",
+      "status": "Archived",
       "lastUpdated": "2026-04-19T11:20:00.000Z",
-      "planPath": "docs/01-plan/news-credibility-logic.md",
-      "reportPath": "docs/03-report/news-credibility-logic.md"
+      "archivePath": "docs/99-archive/news-credibility-logic/"
     },
     "symbol-catalog-refinement": {
       "phase": "Report",
-      "status": "Done",
+      "status": "Archived",
       "lastUpdated": "2026-04-19T11:40:00.000Z",
-      "planPath": "docs/01-plan/symbol-catalog-refinement.md",
-      "reportPath": "docs/03-report/symbol-catalog-refinement.md"
+      "archivePath": "docs/99-archive/symbol-catalog-refinement/"
     },
     "api-integration": {
       "phase": "Report",
-      "status": "Done",
+      "status": "Archived",
       "lastUpdated": "2026-04-19T12:40:00.000Z",
-      "planPath": "docs/01-plan/api-integration.md",
-      "reportPath": "docs/03-report/api-integration.md"
+      "archivePath": "docs/99-archive/api-integration/"
     }
   },
   "pipeline": {
@@ -45,6 +50,6 @@
   "session": {
     "startedAt": "2026-04-19T08:20:03.158Z",
     "onboardingCompleted": true,
-    "lastActivity": "2026-04-19T11:45:00.000Z"
+    "lastActivity": "2026-04-19T13:00:00.000Z"
   }
 }

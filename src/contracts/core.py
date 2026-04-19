@@ -29,6 +29,7 @@ class NormalizedNewsItem:
     canonical_url: str
     published_at: datetime
     language: str
+    dedup_key: str | None = None
     symbols: list[str] = field(default_factory=list)
 
 

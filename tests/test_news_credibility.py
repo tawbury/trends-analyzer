@@ -77,3 +77,56 @@ def test_unverified_short_news(engine):
     assert score.source_tier == "tier_5_unverified"
     assert score.content_quality_score <= 0.4
     assert score.confidence_score < 0.3
+
+def test_corroboration_score_calculation(engine):
+    now = datetime(2026, 4, 19, 10, 0, 0, tzinfo=KST)
+    item1 = NormalizedNewsItem(
+        id="n1", raw_news_id="r1", source="Reuters", normalized_title="T1", normalized_body="B1",
+        canonical_url="", published_at=now, language="en", dedup_key="cluster1", symbols=[]
+    )
+    item2 = NormalizedNewsItem(
+        id="n2", raw_news_id="r2", source="Bloomberg", normalized_title="T1", normalized_body="B1",
+        canonical_url="", published_at=now, language="en", dedup_key="cluster1", symbols=[]
+    )
+    item3 = NormalizedNewsItem(
+        id="n3", raw_news_id="r3", source="Official:Dart", normalized_title="T1", normalized_body="B1",
+        canonical_url="", published_at=now, language="ko", dedup_key="cluster1", symbols=[]
+    )
+    
+    # N=1
+    score1 = engine.calculate_corroboration_score([item1])
+    assert score1 == 0.2
+    
+    # N=2
+    score2 = engine.calculate_corroboration_score([item1, item2])
+    assert score2 == 0.5
+    
+    # N=3
+    score3 = engine.calculate_corroboration_score([item1, item2, item3])
+    assert score3 == 0.7
+    
+    # N=1 (but multiple items from same source)
+    item4 = NormalizedNewsItem(
+        id="n4", raw_news_id="r4", source="Reuters", normalized_title="T1", normalized_body="B1",
+        canonical_url="", published_at=now, language="en", dedup_key="cluster1", symbols=[]
+    )
+    score4 = engine.calculate_corroboration_score([item1, item4])
+    assert score4 == 0.2
+
+
+def test_confidence_boost_by_corroboration(engine):
+    now = datetime(2026, 4, 19, 10, 0, 0, tzinfo=KST)
+    item = NormalizedNewsItem(
+        id="n1", raw_news_id="r1", source="rss:news", normalized_title="Market Up", normalized_body="Stock market is going up today.",
+        canonical_url="http://news.com", published_at=now, language="en", symbols=[]
+    )
+    
+    # Baseline (no corroboration score provided, defaults to 0.2)
+    score_baseline = engine.calculate_scores(item, now)
+    
+    # Boosted (corroboration score 1.0)
+    score_boosted = engine.calculate_scores(item, now, corroboration_score=1.0)
+    
+    assert score_boosted.confidence_score > score_baseline.confidence_score
+    # Difference should be (1.0 - 0.2) * 0.2 = 0.16
+    assert round(score_boosted.confidence_score - score_baseline.confidence_score, 4) == 0.16

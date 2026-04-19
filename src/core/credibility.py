@@ -28,15 +28,22 @@ class NewsCredibilityEngine:
 
     EVIDENCE_KEYWORDS = ["공시", "발표", "확정", "데이터", "통계", "수치"]
 
-    def calculate_scores(self, item: NormalizedNewsItem, now: datetime) -> NewsCredibilityScore:
+    def calculate_scores(
+        self, 
+        item: NormalizedNewsItem, 
+        now: datetime, 
+        corroboration_score: float | None = None
+    ) -> NewsCredibilityScore:
         source_tier, source_weight = self._get_source_info(item.source)
         evidence_score = self._calculate_evidence_score(item)
         content_quality_score = self._calculate_quality_score(item)
         rumor_penalty = self._calculate_rumor_penalty(item)
         freshness_score = self._calculate_freshness_score(item, now)
         
-        # Initial MVP corroboration and conflict logic
-        corroboration_score = 0.2  # Single source initial state
+        # If not provided, use baseline (single source)
+        if corroboration_score is None:
+            corroboration_score = 0.2
+        
         conflict_penalty = 0.0     # Neutral default
 
         confidence_score = self._apply_formula(
@@ -61,6 +68,27 @@ class NewsCredibilityEngine:
             confidence_score=confidence_score,
             method_version=self.method_version,
         )
+
+    def calculate_corroboration_score(self, items: list[NormalizedNewsItem]) -> float:
+        """
+        Calculate score based on diversity of sources for the same dedup_key cluster.
+        N=1: 0.2, N=2: 0.5, N=3: 0.7, N=4: 0.85, N>=5: 1.0
+        """
+        if not items:
+            return 0.0
+            
+        unique_sources = {item.source.lower() for item in items}
+        n = len(unique_sources)
+        
+        if n <= 1:
+            return 0.2
+        if n == 2:
+            return 0.5
+        if n == 3:
+            return 0.7
+        if n == 4:
+            return 0.85
+        return 1.0
 
     def _get_source_info(self, source: str) -> tuple[str, float]:
         for prefix, (tier, weight) in self.TIER_MAPPING.items():
