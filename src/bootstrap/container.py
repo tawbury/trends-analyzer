@@ -18,6 +18,7 @@ from src.contracts.ports import (
     IdempotencyRepository,
     NewsSourcePort,
     QtsPayloadRepository,
+    RawNewsRepository,
     SnapshotRepository,
     WorkflowPayloadRepository,
 )
@@ -29,6 +30,7 @@ from src.db.repositories.jsonl import (
     JsonlGenericPayloadRepository,
     JsonlIdempotencyRepository,
     JsonlQtsPayloadRepository,
+    JsonlRawNewsRepository,
     JsonlSnapshotRepository,
     JsonlWorkflowPayloadRepository,
 )
@@ -64,6 +66,7 @@ class Container:
     generic_payload_repository: GenericPayloadRepository
     workflow_payload_repository: WorkflowPayloadRepository
     idempotency_repository: IdempotencyRepository
+    raw_news_repository: RawNewsRepository
     news_source: NewsSourcePort
     analyze_daily_use_case: AnalyzeDailyTrendsUseCase
     refresh_symbol_catalog_use_case: RefreshSymbolCatalogUseCase
@@ -82,6 +85,7 @@ def build_container(settings: Settings | None = None) -> Container:
     generic_payload_repository = JsonlGenericPayloadRepository(data_dir / "generic_payloads.jsonl")
     workflow_payload_repository = JsonlWorkflowPayloadRepository(data_dir / "workflow_payloads.jsonl")
     idempotency_repository = JsonlIdempotencyRepository(data_dir / "idempotency.jsonl")
+    raw_news_repository = JsonlRawNewsRepository(data_dir / "raw_news.jsonl")
     
     symbol_catalog_repository = JsonSymbolCatalogRepository(
         directory=data_dir / "symbol_catalog",
@@ -111,7 +115,7 @@ def build_container(settings: Settings | None = None) -> Container:
         repository=symbol_catalog_repository,
     )
     get_signals_use_case = GetSignalsUseCase(snapshot_repository=snapshot_repository)
-    ingest_news_use_case = IngestNewsUseCase()
+    ingest_news_use_case = IngestNewsUseCase(raw_news_repo=raw_news_repository)
 
     return Container(
         settings=resolved_settings,
@@ -120,6 +124,7 @@ def build_container(settings: Settings | None = None) -> Container:
         generic_payload_repository=generic_payload_repository,
         workflow_payload_repository=workflow_payload_repository,
         idempotency_repository=idempotency_repository,
+        raw_news_repository=raw_news_repository,
         news_source=news_source,
         analyze_daily_use_case=analyze_daily_use_case,
         refresh_symbol_catalog_use_case=refresh_symbol_catalog_use_case,

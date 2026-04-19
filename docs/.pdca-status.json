@@ -1,15 +1,15 @@
 {
   "version": "2.0",
-  "lastUpdated": "2026-04-19T13:00:00.000Z",
+  "lastUpdated": "2026-04-19T13:45:00.000Z",
   "activeFeatures": [],
   "primaryFeature": null,
   "features": {
-    "corroboration-logic": {
+    "ingest-persistence": {
       "phase": "Report",
       "status": "Done",
-      "lastUpdated": "2026-04-19T13:40:00.000Z",
-      "planPath": "docs/01-plan/corroboration-logic.md",
-      "reportPath": "docs/03-report/corroboration-logic.md"
+      "lastUpdated": "2026-04-19T13:55:00.000Z",
+      "planPath": "docs/01-plan/ingest-persistence.md",
+      "reportPath": "docs/03-report/ingest-persistence.md"
     }
   },
   "archivedFeatures": {
@@ -36,6 +36,12 @@
       "status": "Archived",
       "lastUpdated": "2026-04-19T12:40:00.000Z",
       "archivePath": "docs/99-archive/api-integration/"
+    },
+    "corroboration-logic": {
+      "phase": "Report",
+      "status": "Archived",
+      "lastUpdated": "2026-04-19T13:40:00.000Z",
+      "archivePath": "docs/99-archive/corroboration-logic/"
     }
   },
   "pipeline": {
@@ -50,6 +56,6 @@
   "session": {
     "startedAt": "2026-04-19T08:20:03.158Z",
     "onboardingCompleted": true,
-    "lastActivity": "2026-04-19T13:00:00.000Z"
+    "lastActivity": "2026-04-19T13:45:00.000Z"
   }
 }

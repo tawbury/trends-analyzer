@@ -104,6 +104,24 @@ class JsonlWorkflowPayloadRepository:
         return _workflow_payload_from_dict(item)
 
 
+class JsonlRawNewsRepository:
+    def __init__(self, path: Path) -> None:
+        self.path = path
+        self.path.parent.mkdir(parents=True, exist_ok=True)
+
+    async def save(self, item: RawNewsItem) -> None:
+        _append_jsonl(self.path, _to_jsonable(item))
+
+    async def get(self, raw_news_id: str) -> RawNewsItem | None:
+        item = _find_latest_by_id(self.path, raw_news_id)
+        if item is None:
+            return None
+        return _raw_news_from_dict(item)
+
+    async def exists(self, raw_news_id: str) -> bool:
+        return _find_latest_by_id(self.path, raw_news_id) is not None
+
+
 class JsonlIdempotencyRepository:
     def __init__(self, path: Path) -> None:
         self.path = path
@@ -255,4 +273,20 @@ def _workflow_payload_from_dict(item: dict[str, Any]) -> WorkflowTriggerPayload:
         downstream_payload=item["downstream_payload"],
         dispatch_policy=item["dispatch_policy"],
         generated_at=datetime.fromisoformat(item["generated_at"]),
+    )
+
+def _raw_news_from_dict(item: dict[str, Any]) -> RawNewsItem:
+    from src.contracts.core import RawNewsItem
+    return RawNewsItem(
+        id=item["id"],
+        source=item["source"],
+        source_id=item["source_id"],
+        title=item["title"],
+        body=item["body"],
+        url=item["url"],
+        published_at=datetime.fromisoformat(item["published_at"]),
+        collected_at=datetime.fromisoformat(item["collected_at"]),
+        language=item.get("language", "en"),
+        symbols=item.get("symbols", []),
+        metadata=item.get("metadata", {}),
     )

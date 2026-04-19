@@ -138,3 +138,14 @@ class SymbolCatalogRepository(Protocol):
 
     async def save_selection_report(self, report: SymbolSelectionReport) -> None:
         ...
+
+
+class RawNewsRepository(Protocol):
+    async def save(self, item: RawNewsItem) -> None:
+        ...
+
+    async def get(self, raw_news_id: str) -> RawNewsItem | None:
+        ...
+
+    async def exists(self, raw_news_id: str) -> bool:
+        ...
