@@ -1,5 +1,9 @@
 .history/
 .codex
+.bkit/
+.gemini/
+.vscode/
+.idea/
 
 __pycache__/
 *.py[cod]

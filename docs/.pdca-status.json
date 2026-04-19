@@ -1,0 +1,50 @@
+{
+  "version": "2.0",
+  "lastUpdated": "2026-04-19T11:45:00.000Z",
+  "activeFeatures": [],
+  "primaryFeature": null,
+  "features": {
+    "workspace-alignment-v1": {
+      "phase": "Report",
+      "status": "Done",
+      "lastUpdated": "2026-04-19T11:00:00.000Z",
+      "planPath": "docs/01-plan/workspace-alignment-v1.md",
+      "reportPath": "docs/03-report/workspace-alignment-v1.md"
+    },
+    "news-credibility-logic": {
+      "phase": "Report",
+      "status": "Done",
+      "lastUpdated": "2026-04-19T11:20:00.000Z",
+      "planPath": "docs/01-plan/news-credibility-logic.md",
+      "reportPath": "docs/03-report/news-credibility-logic.md"
+    },
+    "symbol-catalog-refinement": {
+      "phase": "Report",
+      "status": "Done",
+      "lastUpdated": "2026-04-19T11:40:00.000Z",
+      "planPath": "docs/01-plan/symbol-catalog-refinement.md",
+      "reportPath": "docs/03-report/symbol-catalog-refinement.md"
+    },
+    "api-integration": {
+      "phase": "Report",
+      "status": "Done",
+      "lastUpdated": "2026-04-19T12:40:00.000Z",
+      "planPath": "docs/01-plan/api-integration.md",
+      "reportPath": "docs/03-report/api-integration.md"
+    }
+  },
+  "pipeline": {
+    "currentPhase": 4,
+    "level": "Dynamic",
+    "phaseHistory": [
+      { "phase": 1, "completedAt": "2026-04-19T08:00:00Z" },
+      { "phase": 2, "completedAt": "2026-04-19T08:30:00Z" },
+      { "phase": 3, "completedAt": "2026-04-19T09:00:00Z" }
+    ]
+  },
+  "session": {
+    "startedAt": "2026-04-19T08:20:03.158Z",
+    "onboardingCompleted": true,
+    "lastActivity": "2026-04-19T11:45:00.000Z"
+  }
+}
